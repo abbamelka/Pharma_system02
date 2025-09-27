@@ -1,0 +1,29 @@
+{
+  "development": {
+    "username": "root",
+    "password": "your_password",
+    "database": "pharmacy_db",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "port": 3306,
+    "logging": false
+  },
+  "test": {
+    "username": "root",
+    "password": "your_password",
+    "database": "pharmacy_db_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "port": 3306
+  },
+  "production": {
+    "username": "root",
+    "password": "your_password",
+    "database": "pharmacy_db",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "port": 3306,
+    "logging": false,
+    "ssl": true
+  }
+}
