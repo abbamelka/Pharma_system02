@@ -38,7 +38,7 @@ class ReceiptService {
 
     // 5. Subtotal, tax, total
     const subtotal = parseFloat(items.reduce((sum, item) => sum + item.total, 0).toFixed(2));
-    const taxRate = 0.05; // 5%
+    const taxRate = 0.15; // 15%
     const tax = parseFloat((subtotal * taxRate).toFixed(2));
     const total = parseFloat((subtotal + tax).toFixed(2));
 
