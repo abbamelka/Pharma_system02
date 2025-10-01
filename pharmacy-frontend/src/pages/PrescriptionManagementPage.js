@@ -22,6 +22,7 @@ import {
   IconButton,
   Tabs,
   Tab,
+  CircularProgress,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -58,7 +59,15 @@ export default function PrescriptionManagementPage() {
     validUntil: "",
   });
 
+  // Fetch prescriptions based on active tab and phone search
   const fetchPrescriptions = useCallback(async () => {
+    if (activeTab === 1 && !searchPhone.trim()) {
+      setPrescriptions([]);
+      setError("");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -85,13 +94,7 @@ export default function PrescriptionManagementPage() {
           }
         }
       } else if (activeTab === 1) {
-        if (!searchPhone.trim()) {
-          setPrescriptions([]);
-          setLoading(false);
-          return;
-        }
-
-        // ✅ Fixed regex: no unnecessary escape
+        // Validate phone format
         if (!/^[+]?[0-9\s\-()]{8,15}$/.test(searchPhone.trim())) {
           setError("Please enter a valid phone number");
           data = [];
@@ -106,7 +109,7 @@ export default function PrescriptionManagementPage() {
             if (err.response?.status === 400) {
               setError("Invalid phone format");
             } else {
-              throw err;
+              setError("Failed to load prescriptions. Please try again.");
             }
             data = [];
           }
@@ -122,8 +125,13 @@ export default function PrescriptionManagementPage() {
     }
   }, [activeTab, searchPhone, user]);
 
+  // � Auto-fetch when `activeTab` or `searchPhone` changes
   useEffect(() => {
-    fetchPrescriptions();
+    const timer = setTimeout(() => {
+      fetchPrescriptions();
+    }, 600); // Debounce: wait 600ms after typing stops
+
+    return () => clearTimeout(timer); // Cleanup if changed again
   }, [fetchPrescriptions]);
 
   const handleCreatePrescription = async () => {
@@ -197,16 +205,16 @@ export default function PrescriptionManagementPage() {
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
-    setSearchPhone("");
-    setPrescriptions([]);
-    setError("");
+    setSearchPhone(""); // Reset search
+    setPrescriptions([]); // Clear list
+    setError(""); // Clear error
   };
 
-  if (loading) {
+  if (loading && activeTab !== 0) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Box sx={{ mb: 3 }}>
-          <TableSkeleton rows={5} columns={8} />
+        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+          <CircularProgress />
         </Box>
       </Container>
     );
@@ -238,13 +246,13 @@ export default function PrescriptionManagementPage() {
 
       <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
         <Tab label={user?.role === "doctor" ? "My Prescriptions" : "Pending Prescriptions"} />
-        <Tab label="Search by Phone" />
+        <Tab label="� Search by Phone" />
       </Tabs>
 
       {activeTab === 1 && (
         <Paper sx={{ p: 3, mb: 4 }}>
           <Typography variant="subtitle1" gutterBottom>
-            � Search by Patient Phone Number
+            � Search Patient by Phone Number
           </Typography>
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
             <TextField
@@ -255,110 +263,117 @@ export default function PrescriptionManagementPage() {
               placeholder="e.g., +251912345678"
               sx={{ flexGrow: 1, minWidth: 200 }}
               autoFocus
+              helperText="Start typing to search automatically"
             />
-            <Button
-              variant="contained"
-              startIcon={<SearchIcon />}
-              onClick={fetchPrescriptions}
-              disabled={!searchPhone.trim()}
-            >
-              Search
-            </Button>
+            {loading && (
+              <CircularProgress size={28} color="primary" />
+            )}
           </Box>
+          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+            ✨ Results update as you type (debounced for performance).
+          </Typography>
         </Paper>
       )}
 
-      <TableContainer component={Paper}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell><strong>ID</strong></TableCell>
-              <TableCell><strong>Doctor</strong></TableCell>
-              <TableCell><strong>Patient</strong></TableCell>
-              <TableCell><strong>Details</strong></TableCell>
-              <TableCell><strong>Issued At</strong></TableCell>
-              <TableCell><strong>Valid Until</strong></TableCell>
-              <TableCell><strong>Status</strong></TableCell>
-              <TableCell><strong>Actions</strong></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {prescriptions.length === 0 ? (
+      {/* Show skeleton only during initial load of tab 0 */}
+      {loading && activeTab === 0 ? (
+        <TableSkeleton rows={5} columns={8} />
+      ) : (
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                  {activeTab === 0
-                    ? user?.role === "doctor"
-                      ? "No prescriptions created yet"
-                      : "No pending prescriptions"
-                    : "No prescriptions found. Try a different phone number."}
-                </TableCell>
+                <TableCell><strong>ID</strong></TableCell>
+                <TableCell><strong>Doctor</strong></TableCell>
+                <TableCell><strong>Patient</strong></TableCell>
+                <TableCell><strong>Details</strong></TableCell>
+                <TableCell><strong>Issued At</strong></TableCell>
+                <TableCell><strong>Valid Until</strong></TableCell>
+                <TableCell><strong>Status</strong></TableCell>
+                <TableCell><strong>Actions</strong></TableCell>
               </TableRow>
-            ) : (
-              prescriptions.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>#{p.id}</TableCell>
-                  <TableCell>{p.doctor?.username || "Unknown Doctor"}</TableCell>
-                  <TableCell>
-                    {p.customerName || "Walk-in Patient"}
-                    {p.customerPhone && (
-                      <Typography variant="caption" display="block" color="textSecondary">
-                        � {p.customerPhone}
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ maxWidth: 200, wordWrap: "break-word" }}>
-                      {p.details} ({p.dosage}, {p.frequency})
-                    </Typography>
-                  </TableCell>
-                  <TableCell>{new Date(p.issuedAt).toLocaleString()}</TableCell>
-                  <TableCell>
-                    {p.validUntil ? new Date(p.validUntil).toLocaleDateString() : "N/A"}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={p.status}
-                      color={
-                        p.status === "pending"
-                          ? "warning"
-                          : p.status === "fulfilled"
-                          ? "success"
-                          : "error"
-                      }
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                      {p.status === "pending" && user?.role !== "doctor" && (
-                        <IconButton
-                          color="success"
-                          size="small"
-                          onClick={() => handleFulfillPrescription(p.id)}
-                          title="Fulfill Prescription"
-                        >
-                          <CheckCircleIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                      {p.status === "pending" && (
-                        <IconButton
-                          color="error"
-                          size="small"
-                          onClick={() => handleCancelPrescription(p.id)}
-                          title="Cancel Prescription"
-                        >
-                          <CancelIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
+            </TableHead>
+            <TableBody>
+              {prescriptions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                    {activeTab === 0
+                      ? user?.role === "doctor"
+                        ? "No prescriptions created yet"
+                        : "No pending prescriptions"
+                      : searchPhone
+                        ? "No prescriptions found. Try a different phone number."
+                        : "Enter a phone number to search."}
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                prescriptions.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell>#{p.id}</TableCell>
+                    <TableCell>{p.doctor?.username || "Unknown Doctor"}</TableCell>
+                    <TableCell>
+                      {p.customerName || "Walk-in Patient"}
+                      {p.customerPhone && (
+                        <Typography variant="caption" display="block" color="textSecondary">
+                          � {p.customerPhone}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ maxWidth: 200, wordWrap: "break-word" }}>
+                        {p.details} ({p.dosage}, {p.frequency})
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{new Date(p.issuedAt).toLocaleString()}</TableCell>
+                    <TableCell>
+                      {p.validUntil ? new Date(p.validUntil).toLocaleDateString() : "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={p.status}
+                        color={
+                          p.status === "pending"
+                            ? "warning"
+                            : p.status === "fulfilled"
+                            ? "success"
+                            : "error"
+                        }
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                        {p.status === "pending" && user?.role !== "doctor" && (
+                          <IconButton
+                            color="success"
+                            size="small"
+                            onClick={() => handleFulfillPrescription(p.id)}
+                            title="Fulfill Prescription"
+                          >
+                            <CheckCircleIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                        {p.status === "pending" && (
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={() => handleCancelPrescription(p.id)}
+                            title="Cancel Prescription"
+                          >
+                            <CancelIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
+      {/* Create Prescription Modal */}
       <Dialog open={openCreateModal} onClose={() => setOpenCreateModal(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Create Prescription</DialogTitle>
         <DialogContent>
