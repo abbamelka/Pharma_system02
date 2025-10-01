@@ -18,6 +18,14 @@ import {
   CircularProgress,
   Alert,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
@@ -28,6 +36,7 @@ import {
   getBatchesByMedicine,
   getAllMedicines,
   addInventoryToMedicine,
+  getAllSuppliers, // ← New API call
 } from "../services/api";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
@@ -35,6 +44,7 @@ import { useAuth } from "../context/AuthContext";
 export default function InventoryManagementPage() {
   const { user } = useAuth();
   const [medicines, setMedicines] = useState([]);
+  const [suppliers, setSuppliers] = useState([]); // Store suppliers
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -50,33 +60,56 @@ export default function InventoryManagementPage() {
     quantity: "",
     expiryDate: "",
     purchasePrice: "",
-    supplierId: "",
+    supplierId: "", // Still stores ID
   });
 
-  // Fetch medicines and full inventory
-  const fetchInventory = async () => {
+  // Fetch medicines, suppliers, and full inventory
+  const fetchInventoryData = async () => {
     try {
       setLoading(true);
+      setError("");
+
+      // Fetch all medicines
       const medicineRes = await getAllMedicines();
-      const meds = medicineRes.data?.medicines || [];
+      const meds = Array.isArray(medicineRes.data?.medicines)
+        ? medicineRes.data.medicines
+        : [];
 
       setMedicines(meds);
 
+      // Fetch all suppliers
+      let fetchedSuppliers = [];
+      try {
+        const supplierRes = await getAllSuppliers();
+        fetchedSuppliers = Array.isArray(supplierRes.data?.suppliers)
+          ? supplierRes.data.suppliers
+          : [];
+      } catch (err) {
+        console.warn("Failed to load suppliers:", err.message);
+        toast.warning("Could not load supplier list.");
+      }
+      setSuppliers(fetchedSuppliers);
+
+      // Fetch inventory batches
       const inventoryList = [];
       for (const med of meds) {
         try {
           const res = await getBatchesByMedicine(med.id);
-          const batches = res.data?.batches || [];
+          const batches = Array.isArray(res.data?.batches) ? res.data.batches : [];
+
           batches.forEach((batch) => {
+            // Find supplier by ID
+            const supplier = fetchedSuppliers.find(s => s.id === batch.supplierId);
             inventoryList.push({
               ...batch,
               medicineName: med.name,
               category: med.category,
               salePrice: med.price,
+              supplierName: supplier?.name || "Unknown Supplier"
             });
           });
         } catch (err) {
-          console.warn(`Failed to load batches for ${med.name}`);
+          console.warn(`Failed to load batches for ${med.name}`, err);
         }
       }
 
@@ -90,7 +123,7 @@ export default function InventoryManagementPage() {
   };
 
   useEffect(() => {
-    fetchInventory();
+    fetchInventoryData();
   }, []);
 
   // Handle search
@@ -106,27 +139,24 @@ export default function InventoryManagementPage() {
     return (
       item.medicineName.toLowerCase().includes(term) ||
       item.batchNumber.toLowerCase().includes(term) ||
-      item.category.toLowerCase().includes(term)
+      item.category.toLowerCase().includes(term) ||
+      item.supplierName.toLowerCase().includes(term)
     );
   });
 
-  // ✅ Count low stock, expiring soon, and expired
+  // Count alerts
   const lowStockCount = filteredInventory.filter(b => b.quantity < 5).length;
-  const expiringSoonCount = filteredInventory.filter(
-    b => {
-      const expiry = new Date(b.expiryDate);
-      expiry.setHours(0, 0, 0, 0);
-      return expiry >= now && expiry < new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    }
-  ).length;
+  const expiringSoonCount = filteredInventory.filter(b => {
+    const expiry = new Date(b.expiryDate);
+    expiry.setHours(0, 0, 0, 0);
+    return expiry >= now && expiry < new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  }).length;
 
-  const expiredCount = filteredInventory.filter(
-    b => {
-      const expiry = new Date(b.expiryDate);
-      expiry.setHours(0, 0, 0, 0);
-      return expiry < now;
-    }
-  ).length;
+  const expiredCount = filteredInventory.filter(b => {
+    const expiry = new Date(b.expiryDate);
+    expiry.setHours(0, 0, 0, 0);
+    return expiry < now;
+  }).length;
 
   // Open Add Inventory Modal
   const handleOpenAddModal = (medicine) => {
@@ -159,7 +189,7 @@ export default function InventoryManagementPage() {
       await addInventoryToMedicine(currentMedicine.id, formData);
       toast.success(`✅ Added to ${currentMedicine.name}`);
       setOpenAddModal(false);
-      fetchInventory(); // Refresh list
+      fetchInventoryData(); // Refresh list
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to add inventory";
       toast.error(msg);
@@ -189,31 +219,23 @@ export default function InventoryManagementPage() {
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom>
-        📦 Inventory Management
+        � Inventory Management
       </Typography>
       <Typography variant="body1" color="textSecondary" gutterBottom>
-        Track all medicine batches, expiry dates, and stock levels
+        Track all medicine batches, expiry dates, stock levels, and suppliers
       </Typography>
 
-      {/* 🔍 Search Bar */}
+      {/* � Search Bar */}
       <Paper sx={{ p: 3, mb: 4 }}>
         <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
           <TextField
-            label="Search by Medicine, Batch, or Category"
+            label="Search by Medicine, Batch, Category, or Supplier"
             variant="outlined"
             fullWidth
             value={searchTerm}
             onChange={handleSearch}
-            placeholder="e.g., parctamol, 013, OTC"
+            placeholder="e.g., paracetamol, 013, OTC, PharmaCorp"
           />
-          <Button
-            variant="contained"
-            startIcon={<SearchIcon />}
-            onClick={() => {}}
-            disabled
-          >
-            Search
-          </Button>
         </Box>
       </Paper>
 
@@ -302,7 +324,7 @@ export default function InventoryManagementPage() {
                         <Chip
                           label={
                             isExpired 
-                              ? "🔴 Expired" 
+                              ? "� Expired" 
                               : isExpiringSoon 
                                 ? "⚠️ Soon" 
                                 : "✅ OK"
@@ -312,7 +334,7 @@ export default function InventoryManagementPage() {
                         />
                       </Tooltip>
                     </TableCell>
-                    <TableCell>{item.supplierId || "N/A"}</TableCell>
+                    <TableCell>{item.supplierName}</TableCell>
                     <TableCell>
                       <Button
                         size="small"
@@ -335,6 +357,7 @@ export default function InventoryManagementPage() {
         <AddInventoryModal
           medicine={currentMedicine}
           formData={formData}
+          suppliers={suppliers}
           handleChange={handleChange}
           handleSubmit={handleAddInventory}
           handleClose={() => setOpenAddModal(false)}
@@ -344,86 +367,84 @@ export default function InventoryManagementPage() {
   );
 }
 
-// Reusable Modal Component
-function AddInventoryModal({ medicine, formData, handleChange, handleSubmit, handleClose }) {
+// ✅ Enhanced Modal with Supplier Dropdown
+function AddInventoryModal({ medicine, formData, suppliers, handleChange, handleSubmit, handleClose }) {
   return (
-    <Paper
-      sx={{
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: 400,
-        p: 4,
-        zIndex: 1300,
-        backgroundColor: "background.paper",
-        borderRadius: 2,
-        boxShadow: 24,
-      }}
-    >
-      <Typography variant="h6" gutterBottom>
-        Add Inventory: {medicine?.name}
-      </Typography>
-      <Box component="form" noValidate>
-        <TextField
-          margin="dense"
-          name="batchNumber"
-          label="Batch Number"
-          fullWidth
-          value={formData.batchNumber}
-          onChange={handleChange}
-          autoFocus
-          required
-        />
-        <TextField
-          margin="dense"
-          name="quantity"
-          label="Quantity"
-          type="number"
-          fullWidth
-          value={formData.quantity}
-          onChange={handleChange}
-          required
-          inputProps={{ min: 1 }}
-        />
-        <TextField
-          margin="dense"
-          name="expiryDate"
-          label="Expiry Date"
-          type="date"
-          fullWidth
-          InputLabelProps={{ shrink: true }}
-          value={formData.expiryDate}
-          onChange={handleChange}
-          required
-        />
-        <TextField
-          margin="dense"
-          name="purchasePrice"
-          label="Purchase Price"
-          type="number"
-          fullWidth
-          value={formData.purchasePrice}
-          onChange={handleChange}
-          inputProps={{ step: "0.01" }}
-        />
-        <TextField
-          margin="dense"
-          name="supplierId"
-          label="Supplier ID"
-          type="number"
-          fullWidth
-          value={formData.supplierId}
-          onChange={handleChange}
-          placeholder="Optional"
-        />
-        <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button variant="contained" color="primary" onClick={handleSubmit}>
-            Add
-          </Button>
+    <Dialog open onClose={handleClose} fullWidth maxWidth="sm">
+      <DialogTitle>Add Inventory: {medicine?.name}</DialogTitle>
+      <DialogContent>
+        <Box component="form" noValidate sx={{ mt: 2 }}>
+          <TextField
+            margin="dense"
+            name="batchNumber"
+            label="Batch Number"
+            fullWidth
+            value={formData.batchNumber}
+            onChange={handleChange}
+            autoFocus
+            required
+          />
+          <TextField
+            margin="dense"
+            name="quantity"
+            label="Quantity"
+            type="number"
+            fullWidth
+            value={formData.quantity}
+            onChange={handleChange}
+            required
+            inputProps={{ min: 1 }}
+          />
+          <TextField
+            margin="dense"
+            name="expiryDate"
+            label="Expiry Date"
+            type="date"
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+            value={formData.expiryDate}
+            onChange={handleChange}
+            required
+          />
+          <TextField
+            margin="dense"
+            name="purchasePrice"
+            label="Purchase Price"
+            type="number"
+            fullWidth
+            value={formData.purchasePrice}
+            onChange={handleChange}
+            inputProps={{ step: "0.01" }}
+          />
+
+          {/* Supplier Dropdown */}
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Supplier</InputLabel>
+            <Select
+              name="supplierId"
+              value={formData.supplierId}
+              label="Supplier"
+              onChange={handleChange}
+            >
+              {suppliers.length === 0 ? (
+                <MenuItem disabled>No suppliers found</MenuItem>
+              ) : (
+                suppliers.map((sup) => (
+                  <MenuItem key={sup.id} value={sup.id}>
+                    {sup.name}
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
         </Box>
-      </Box>
-    </Paper>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose}>Cancel</Button>
+        <Button variant="contained" color="primary" onClick={handleSubmit}>
+          Add
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

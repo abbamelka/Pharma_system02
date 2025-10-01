@@ -41,11 +41,13 @@ import {
   getMedicineById,
   addInventoryToMedicine,
   searchMedicines,
+  getAllSuppliers // ← New import
 } from "../services/api";
 import { toast } from "react-toastify";
 
 export default function MedicineManagementPage() {
   const [medicines, setMedicines] = useState([]);
+  const [suppliers, setSuppliers] = useState([]); // Store suppliers list
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -71,15 +73,15 @@ export default function MedicineManagementPage() {
     quantity: "",
     expiryDate: "",
     purchasePrice: "",
-    supplierId: "",
+    supplierId: "", // Still stores ID
   });
 
   // ✅ Validate expiry date is at least 6 days from today
   const isValidExpiryDate = (dateString) => {
-    if (!dateString) return true; // Allow empty (optional field)
+    if (!dateString) return true;
     const inputDate = new Date(dateString);
     const minDate = new Date();
-    minDate.setDate(minDate.getDate() + 6); // Today + 6 days
+    minDate.setDate(minDate.getDate() + 6);
     minDate.setHours(0, 0, 0, 0);
     inputDate.setHours(0, 0, 0, 0);
     return inputDate >= minDate;
@@ -105,14 +107,28 @@ export default function MedicineManagementPage() {
     }
   };
 
+  // Fetch all suppliers
+  const fetchSuppliers = async () => {
+    try {
+      const response = await getAllSuppliers();
+      const data = response.data?.suppliers || [];
+      setSuppliers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load suppliers:", err);
+      toast.warn("Could not load supplier list.");
+      setSuppliers([]);
+    }
+  };
+
   useEffect(() => {
     fetchMedicines();
+    fetchSuppliers(); // Load suppliers on mount
   }, []);
 
-  // 🔍 Search Medicines
+  // � Search Medicines
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
-      fetchMedicines(); // fallback to all
+      fetchMedicines();
       return;
     }
 
@@ -157,8 +173,6 @@ export default function MedicineManagementPage() {
       toast.error("Valid price is required");
       return;
     }
-
-    // ✅ Validate expiry date: must be at least 6 days from today
     if (!isValidExpiryDate(formData.expiryDate)) {
       toast.error("Expiry date must be at least 6 days from today");
       return;
@@ -182,8 +196,6 @@ export default function MedicineManagementPage() {
       toast.error("Medicine name is required");
       return;
     }
-
-    // ✅ Validate expiry date: must be at least 6 days from today
     if (!isValidExpiryDate(formData.expiryDate)) {
       toast.error("Expiry date must be at least 6 days from today");
       return;
@@ -207,7 +219,7 @@ export default function MedicineManagementPage() {
 
     try {
       await deleteMedicine(id);
-      toast.success("🗑️ Medicine deleted!");
+      toast.success("�️ Medicine deleted!");
       fetchMedicines();
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to delete medicine";
@@ -244,6 +256,7 @@ export default function MedicineManagementPage() {
     setInventoryData((prev) => ({
       ...prev,
       expiryDate: medicine.expiryDate ? medicine.expiryDate.split("T")[0] : prev.expiryDate,
+      supplierId: "" // Reset selection
     }));
     setOpenInventoryModal(true);
   };
@@ -261,8 +274,10 @@ export default function MedicineManagementPage() {
       toast.error("Expiry date is required");
       return;
     }
-
-    // ✅ Validate inventory expiry date too
+    if (!inventoryData.supplierId) {
+      toast.error("Please select a supplier");
+      return;
+    }
     if (!isValidExpiryDate(inventoryData.expiryDate)) {
       toast.error("Expiry date must be at least 6 days from today");
       return;
@@ -270,7 +285,7 @@ export default function MedicineManagementPage() {
 
     try {
       await addInventoryToMedicine(currentMedicine.id, inventoryData);
-      toast.success("📦 Inventory added successfully!");
+      toast.success("� Inventory added successfully!");
       fetchMedicines();
       setOpenInventoryModal(false);
       resetInventoryForm();
@@ -308,16 +323,17 @@ export default function MedicineManagementPage() {
   };
 
   const handleInventoryInputChange = (e) => {
-    setInventoryData({ ...inventoryData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setInventoryData({ ...inventoryData, [name]: value });
   };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom>
-        💊 Medicine Management
+        � Medicine Management
       </Typography>
 
-      {/* 🔍 Search */}
+      {/* � Search */}
       <Box sx={{ mb: 3 }}>
         <TextField
           label="Search by name, barcode, or ID"
@@ -326,7 +342,7 @@ export default function MedicineManagementPage() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="e.g., parctamol, vitamin, 123"
+          placeholder="e.g., paracetamol, vitamin, 123"
           helperText="Start typing to find medicine fast"
         />
         <Box sx={{ mt: 2, display: "flex", gap: 2, flexWrap: "wrap" }}>
@@ -351,7 +367,7 @@ export default function MedicineManagementPage() {
         </Box>
       </Box>
 
-      {/* 🩺 Create New Medicine */}
+      {/* � Create New Medicine */}
       <Box sx={{ mb: 3 }}>
         <Button
           variant="contained"
@@ -364,7 +380,7 @@ export default function MedicineManagementPage() {
 
       {error && <Alert severity="warning" sx={{ mb: 2 }}>{error}</Alert>}
 
-      {/* 📚 Medicine Table */}
+      {/* � Medicine Table */}
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
@@ -683,16 +699,27 @@ export default function MedicineManagementPage() {
             onChange={handleInventoryInputChange}
             inputProps={{ step: "0.01" }}
           />
-          <TextField
-            margin="dense"
-            name="supplierId"
-            label="Supplier ID"
-            type="number"
-            fullWidth
-            value={inventoryData.supplierId}
-            onChange={handleInventoryInputChange}
-            placeholder="Optional"
-          />
+
+          {/* Supplier Dropdown */}
+          <FormControl fullWidth sx={{ mt: 2 }} required>
+            <InputLabel>Supplier</InputLabel>
+            <Select
+              name="supplierId"
+              value={inventoryData.supplierId}
+              label="Supplier"
+              onChange={handleInventoryInputChange}
+            >
+              {suppliers.length === 0 ? (
+                <MenuItem disabled>No suppliers found</MenuItem>
+              ) : (
+                suppliers.map((sup) => (
+                  <MenuItem key={sup.id} value={sup.id}>
+                    {sup.name}
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenInventoryModal(false)}>Cancel</Button>
