@@ -16,6 +16,7 @@ import {
   Divider,
   Card,
   CardContent,
+  ListItemIcon,
 } from "@mui/material";
 import {
   getDailySales,
@@ -31,9 +32,11 @@ import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import MedicalInformationIcon from '@mui/icons-material/MedicalInformation';
-import StorefrontIcon from '@mui/icons-material/Storefront'; // ✅ Replaced StoreIcon
+import StorefrontIcon from '@mui/icons-material/Storefront';
 import WarningIcon from '@mui/icons-material/Warning';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import ReportIcon from '@mui/icons-material/Report';     // For expired
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'; // For near expiry
 
 import SalesChart from "../components/charts/SalesChart";
 import TopMedicinesChart from "../components/charts/TopMedicinesChart";
@@ -72,7 +75,6 @@ export default function DashboardPage() {
       if (results[0].status === 'fulfilled' && results[0].value?.data.report) {
         const data = results[0].value.data.report;
         
-        // ✅ Log to debug what's coming from API
         console.log("� Daily Sales Response:", data);
 
         const total = parseFloat(data.total || data.totalSales || 0);
@@ -176,9 +178,14 @@ export default function DashboardPage() {
     { name: "Expiring Soon", value: expiringSoonAlerts.length },
   ].filter(item => item.value > 0);
 
+  // Check if any batch is already expired
+  const hasExpired = expiringSoonAlerts.some(
+    item => new Date(item.expiryDate) < new Date()
+  );
+
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 6 }}>
-      {/* ✅ Fixed Icon & Title */}
+      {/* Header */}
       <Box display="flex" alignItems="center" justifyContent="center" gap={1} mb={4}>
         <StorefrontIcon color="primary" fontSize="large" />
         <Typography variant="h4" align="center">
@@ -295,6 +302,7 @@ export default function DashboardPage() {
 
       {/* Alerts */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* Low Stock Alerts */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3, height: "100%" }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
@@ -319,7 +327,7 @@ export default function DashboardPage() {
                   <ListItem key={idx}>
                     <ListItemText
                       primary={item.medicineName}
-                      secondary={`Batch: ${item.batchNumber} | Qty: ${item.quantity} | Exp: ${new Date(item.expiryDate).toLocaleDateString()}`}
+                      secondary={`Batch: ${item.batchNumber} | Qty: ${item.quantity}`}
                     />
                   </ListItem>
                 ))}
@@ -328,6 +336,7 @@ export default function DashboardPage() {
           </Paper>
         </Grid>
 
+        {/* Expiring Soon Alerts */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3, height: "100%" }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
@@ -337,7 +346,7 @@ export default function DashboardPage() {
               </Box>
               <Chip
                 label={`${expiringSoonAlerts.length} batches`}
-                color={expiringSoonAlerts.length > 0 ? "warning" : "default"}
+                color={hasExpired ? "error" : expiringSoonAlerts.length > 0 ? "warning" : "default"}
                 size="small"
               />
             </Box>
@@ -348,14 +357,55 @@ export default function DashboardPage() {
               </Typography>
             ) : (
               <List dense>
-                {expiringSoonAlerts.map((item, idx) => (
-                  <ListItem key={idx}>
-                    <ListItemText
-                      primary={item.medicineName}
-                      secondary={`Batch: ${item.batchNumber} | Qty: ${item.quantity} | Exp: ${new Date(item.expiryDate).toLocaleDateString()}`}
-                    />
-                  </ListItem>
-                ))}
+                {expiringSoonAlerts.map((item, idx) => {
+                  const expiry = new Date(item.expiryDate);
+                  const today = new Date();
+                  const timeDiff = expiry - today;
+                  const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+                  let primaryColor = "text.primary";
+                  let secondaryColor = "text.secondary";
+                  let fontWeight = "normal";
+
+                  if (daysDiff < 0) {
+                    primaryColor = "error.main";
+                    secondaryColor = "error.main";
+                    fontWeight = "bold";
+                  } else if (daysDiff <= 7) {
+                    primaryColor = "warning.dark";
+                    secondaryColor = "warning.main";
+                    fontWeight = "medium";
+                  }
+
+                  return (
+                    <ListItem key={idx} alignItems="flex-start">
+                      <ListItemIcon sx={{ minWidth: 36 }}>
+                        {daysDiff < 0 ? (
+                          <ReportIcon color="error" fontSize="small" />
+                        ) : daysDiff <= 7 ? (
+                          <WarningAmberIcon color="warning" fontSize="small" />
+                        ) : null}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Typography component="span" color={primaryColor} fontWeight={fontWeight}>
+                            {item.medicineName}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography component="span" variant="body2" color={secondaryColor}>
+                            Batch: {item.batchNumber} | Qty: {item.quantity} | 
+                            Exp: {expiry.toLocaleDateString()} 
+                            {daysDiff < 0 
+                              ? " (Expired)" 
+                              : ` (${daysDiff} day${daysDiff !== 1 ? 's' : ''} left)`
+                            }
+                          </Typography>
+                        }
+                      />
+                    </ListItem>
+                  );
+                })}
               </List>
             )}
           </Paper>
