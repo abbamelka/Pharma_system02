@@ -70,21 +70,25 @@ class OrderService {
     let total = 0;
 
     for (const item of items) {
-      if (!item.medicineId || !item.quantity || item.quantity < 1) {
-        throw new Error(`Invalid item: medicineId=${item.medicineId}, quantity=${item.quantity}`);
+      // ✅ FIX: Support both 'id' and 'medicineId'
+      const medicineId = item.medicineId || item.id;
+      const quantity = item.quantity;
+
+      if (!medicineId || !quantity || quantity < 1) {
+        throw new Error(`Invalid item: medicineId=${medicineId}, quantity=${quantity}`);
       }
 
-      const med = await Medicine.findByPk(item.medicineId);
+      const med = await Medicine.findByPk(medicineId);
       if (!med) {
-        throw new Error(`Medicine with ID ${item.medicineId} not found`);
+        throw new Error(`Medicine with ID ${medicineId} not found`);
       }
 
       const unitPrice = parseFloat(med.price);
-      const lineTotal = unitPrice * item.quantity;
+      const lineTotal = unitPrice * quantity;
 
       validatedItems.push({
         medicineId: med.id,
-        quantity: item.quantity,
+        quantity,
         unitPrice
       });
 

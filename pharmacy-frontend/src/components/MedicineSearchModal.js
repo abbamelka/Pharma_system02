@@ -46,7 +46,13 @@ export default function MedicineSearchModal({ open, onClose, onAddMedicine }) {
 
           const results = response?.data?.medicines;
           if (Array.isArray(results)) {
-            setMedicines(results);
+            // ✅ Normalize _id → id for consistency
+            const normalized = results.map(med => ({
+              ...med,
+              id: med.id || med._id,
+              price: parseFloat(med.price) || 0
+            }));
+            setMedicines(normalized);
             setError("");
           } else {
             setMedicines([]);
@@ -70,11 +76,11 @@ export default function MedicineSearchModal({ open, onClose, onAddMedicine }) {
   }, [searchTerm, open]);
 
   const handleAdd = (med) => {
-    // ✅ Pass only clean medicine object (no quantity!)
+    // ✅ Ensure we pass `id` (not _id)
     onAddMedicine({
-      id: med.id,
+      id: med.id,  // Now guaranteed to exist
       name: med.name,
-      price: parseFloat(med.price) || 0,
+      price: med.price,
       description: med.description,
       category: med.category,
       manufacturer: med.manufacturer,
@@ -116,7 +122,7 @@ export default function MedicineSearchModal({ open, onClose, onAddMedicine }) {
                   <ListItemButton onClick={() => handleAdd(med)}>
                     <ListItemText
                       primary={med.name}
-                      secondary={`$${parseFloat(med.price).toFixed(2)} | ${med.manufacturer || 'N/A'}`}
+                      secondary={`$${med.price.toFixed(2)} | ${med.manufacturer || 'N/A'}`}
                     />
                   </ListItemButton>
                 </ListItem>

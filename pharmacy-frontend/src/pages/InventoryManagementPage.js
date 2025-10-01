@@ -62,7 +62,6 @@ export default function InventoryManagementPage() {
 
       setMedicines(meds);
 
-      // Get inventory for each medicine
       const inventoryList = [];
       for (const med of meds) {
         try {
@@ -99,6 +98,9 @@ export default function InventoryManagementPage() {
     setSearchTerm(e.target.value);
   };
 
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
   const filteredInventory = inventory.filter((item) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -107,6 +109,24 @@ export default function InventoryManagementPage() {
       item.category.toLowerCase().includes(term)
     );
   });
+
+  // ✅ Count low stock, expiring soon, and expired
+  const lowStockCount = filteredInventory.filter(b => b.quantity < 5).length;
+  const expiringSoonCount = filteredInventory.filter(
+    b => {
+      const expiry = new Date(b.expiryDate);
+      expiry.setHours(0, 0, 0, 0);
+      return expiry >= now && expiry < new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    }
+  ).length;
+
+  const expiredCount = filteredInventory.filter(
+    b => {
+      const expiry = new Date(b.expiryDate);
+      expiry.setHours(0, 0, 0, 0);
+      return expiry < now;
+    }
+  ).length;
 
   // Open Add Inventory Modal
   const handleOpenAddModal = (medicine) => {
@@ -201,13 +221,19 @@ export default function InventoryManagementPage() {
       <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
         <Chip
           icon={<WarningIcon />}
-          label={`${inventory.filter(b => b.quantity < 5).length} Low Stock`}
+          label={`${lowStockCount} Low Stock`}
           color="warning"
           size="small"
         />
         <Chip
           icon={<DangerousIcon />}
-          label={`${inventory.filter(b => new Date(b.expiryDate) < new Date(Date.now() + 30*24*60*60*1000)).length} Expiring Soon`}
+          label={`${expiringSoonCount} Expiring Soon`}
+          color="warning"
+          size="small"
+        />
+        <Chip
+          icon={<DangerousIcon />}
+          label={`${expiredCount} Expired`}
           color="error"
           size="small"
         />
@@ -238,8 +264,12 @@ export default function InventoryManagementPage() {
               </TableRow>
             ) : (
               filteredInventory.map((item) => {
+                const expiryDate = new Date(item.expiryDate);
+                expiryDate.setHours(0, 0, 0, 0);
+
                 const isLowStock = item.quantity < 5;
-                const isExpiringSoon = new Date(item.expiryDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                const isExpiringSoon = expiryDate >= now && expiryDate < new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+                const isExpired = expiryDate < now;
 
                 return (
                   <TableRow key={item.id}>
@@ -270,13 +300,19 @@ export default function InventoryManagementPage() {
                     <TableCell>
                       <Tooltip title={new Date(item.expiryDate).toLocaleDateString()}>
                         <Chip
-                          label={isExpiringSoon ? "⚠️ Soon" : "OK"}
-                          color={isExpiringSoon ? "warning" : "success"}
+                          label={
+                            isExpired 
+                              ? "🔴 Expired" 
+                              : isExpiringSoon 
+                                ? "⚠️ Soon" 
+                                : "✅ OK"
+                          }
+                          color={isExpired ? "error" : isExpiringSoon ? "warning" : "success"}
                           size="small"
                         />
                       </Tooltip>
                     </TableCell>
-                    <TableCell>{item.supplierId}</TableCell>
+                    <TableCell>{item.supplierId || "N/A"}</TableCell>
                     <TableCell>
                       <Button
                         size="small"

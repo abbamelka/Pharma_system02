@@ -43,7 +43,6 @@ import {
   searchMedicines,
 } from "../services/api";
 import { toast } from "react-toastify";
-import TableSkeleton from "../components/skeletons/TableSkeleton";
 
 export default function MedicineManagementPage() {
   const [medicines, setMedicines] = useState([]);
@@ -74,6 +73,17 @@ export default function MedicineManagementPage() {
     purchasePrice: "",
     supplierId: "",
   });
+
+  // ✅ Validate expiry date is at least 6 days from today
+  const isValidExpiryDate = (dateString) => {
+    if (!dateString) return true; // Allow empty (optional field)
+    const inputDate = new Date(dateString);
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() + 6); // Today + 6 days
+    minDate.setHours(0, 0, 0, 0);
+    inputDate.setHours(0, 0, 0, 0);
+    return inputDate >= minDate;
+  };
 
   // Fetch all medicines
   const fetchMedicines = async () => {
@@ -109,8 +119,6 @@ export default function MedicineManagementPage() {
     setLoading(true);
     try {
       const response = await searchMedicines({ search: searchTerm });
-      console.log("🔍 Search Response:", response);
-
       const results = response?.data?.medicines;
       if (Array.isArray(results)) {
         setMedicines(results);
@@ -150,6 +158,12 @@ export default function MedicineManagementPage() {
       return;
     }
 
+    // ✅ Validate expiry date: must be at least 6 days from today
+    if (!isValidExpiryDate(formData.expiryDate)) {
+      toast.error("Expiry date must be at least 6 days from today");
+      return;
+    }
+
     try {
       await createMedicine(formData);
       toast.success("✅ Medicine created successfully!");
@@ -166,6 +180,12 @@ export default function MedicineManagementPage() {
   const handleUpdateMedicine = async () => {
     if (!formData.name.trim()) {
       toast.error("Medicine name is required");
+      return;
+    }
+
+    // ✅ Validate expiry date: must be at least 6 days from today
+    if (!isValidExpiryDate(formData.expiryDate)) {
+      toast.error("Expiry date must be at least 6 days from today");
       return;
     }
 
@@ -239,6 +259,12 @@ export default function MedicineManagementPage() {
     }
     if (!inventoryData.expiryDate) {
       toast.error("Expiry date is required");
+      return;
+    }
+
+    // ✅ Validate inventory expiry date too
+    if (!isValidExpiryDate(inventoryData.expiryDate)) {
+      toast.error("Expiry date must be at least 6 days from today");
       return;
     }
 
@@ -424,7 +450,6 @@ export default function MedicineManagementPage() {
         </Table>
       </TableContainer>
 
-      {/* Modals */}
       {/* Add Medicine Modal */}
       <Dialog open={openAddModal} onClose={() => setOpenAddModal(false)} fullWidth maxWidth="sm">
         <DialogTitle>Create New Medicine</DialogTitle>
@@ -498,6 +523,12 @@ export default function MedicineManagementPage() {
             InputLabelProps={{ shrink: true }}
             value={formData.expiryDate}
             onChange={handleInputChange}
+            error={!isValidExpiryDate(formData.expiryDate) && formData.expiryDate !== ""}
+            helperText={
+              !isValidExpiryDate(formData.expiryDate) && formData.expiryDate !== ""
+                ? "Expiry date must be at least 6 days from today"
+                : ""
+            }
           />
         </DialogContent>
         <DialogActions>
@@ -581,6 +612,12 @@ export default function MedicineManagementPage() {
             InputLabelProps={{ shrink: true }}
             value={formData.expiryDate}
             onChange={handleInputChange}
+            error={!isValidExpiryDate(formData.expiryDate) && formData.expiryDate !== ""}
+            helperText={
+              !isValidExpiryDate(formData.expiryDate) && formData.expiryDate !== ""
+                ? "Expiry date must be at least 6 days from today"
+                : ""
+            }
           />
         </DialogContent>
         <DialogActions>
@@ -629,6 +666,12 @@ export default function MedicineManagementPage() {
             value={inventoryData.expiryDate}
             onChange={handleInventoryInputChange}
             required
+            error={!isValidExpiryDate(inventoryData.expiryDate) && inventoryData.expiryDate !== ""}
+            helperText={
+              !isValidExpiryDate(inventoryData.expiryDate) && inventoryData.expiryDate !== ""
+                ? "Expiry date must be at least 6 days from today"
+                : ""
+            }
           />
           <TextField
             margin="dense"

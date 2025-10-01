@@ -24,6 +24,7 @@ import { getLowStockAlerts, getExpiringSoonAlerts } from "../services/api";
 export default function InventoryPage() {
   const [lowStockAlerts, setLowStockAlerts] = useState([]);
   const [expiringSoonAlerts, setExpiringSoonAlerts] = useState([]);
+  const [expiredBatches, setExpiredBatches] = useState([]); // ✅ New state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [threshold, setThreshold] = useState(5);
@@ -39,19 +40,43 @@ export default function InventoryPage() {
         getExpiringSoonAlerts(days)
       ]);
 
-      // ✅ Fix: Use .batches, not .data.data
       const lowStockData = lowStockRes.data?.batches || [];
       const expiringData = expiringRes.data?.batches || [];
 
-      // ✅ Map to expected shape for frontend
-      const mappedLowStock = lowStockData.map(item => ({
-        medicineName: item.Medicine?.name || "Unknown",
-        batchNumber: item.batchNumber,
-        currentStock: item.quantity,
-        expiryDate: item.expiryDate
-      }));
+      // ✅ Map and split expiring vs expired
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
 
-      const mappedExpiring = expiringData.map(item => ({
+      const mappedExpiring = [];
+      const mappedExpired = [];
+
+      expiringData.forEach(item => {
+        const expiryDate = new Date(item.expiryDate);
+        expiryDate.setHours(0, 0, 0, 0);
+
+        if (expiryDate < now) {
+          mappedExpired.push({
+            medicineName: item.Medicine?.name || "Unknown",
+            batchNumber: item.batchNumber,
+            currentStock: item.quantity,
+            expiryDate: item.expiryDate
+          });
+        } else {
+          mappedExpiring.push({
+            medicineName: item.Medicine?.name || "Unknown",
+            batchNumber: item.batchNumber,
+            currentStock: item.quantity,
+            expiryDate: item.expiryDate
+          });
+        }
+      });
+
+      // ✅ Sort: soonest first
+      mappedExpiring.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+      mappedExpired.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+      // ✅ Map low stock
+      const mappedLowStock = lowStockData.map(item => ({
         medicineName: item.Medicine?.name || "Unknown",
         batchNumber: item.batchNumber,
         currentStock: item.quantity,
@@ -60,6 +85,7 @@ export default function InventoryPage() {
 
       setLowStockAlerts(mappedLowStock);
       setExpiringSoonAlerts(mappedExpiring);
+      setExpiredBatches(mappedExpired);
     } catch (err) {
       console.error("Error fetching inventory alerts:", err);
       setError("Failed to load inventory alerts");
@@ -213,6 +239,54 @@ export default function InventoryPage() {
                             label={new Date(item.expiryDate).toLocaleDateString()} 
                             color="warning" 
                             size="small" 
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Expired Batches */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+              <Typography variant="h6">🔴 Expired Medicines</Typography>
+              <Chip 
+                label={`${expiredBatches.length} batches`} 
+                color={expiredBatches.length > 0 ? "error" : "default"}
+                size="small"
+              />
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+            {expiredBatches.length === 0 ? (
+              <Typography color="textSecondary">✅ No expired medicines found</Typography>
+            ) : (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell><strong>Medicine</strong></TableCell>
+                      <TableCell><strong>Batch</strong></TableCell>
+                      <TableCell><strong>Stock</strong></TableCell>
+                      <TableCell><strong>Expiry</strong></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {expiredBatches.map((item, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>{item.medicineName}</TableCell>
+                        <TableCell>{item.batchNumber}</TableCell>
+                        <TableCell>{item.currentStock}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={new Date(item.expiryDate).toLocaleDateString()} 
+                            color="error" 
+                            size="small" 
+                            icon={<span style={{ fontSize: '0.8em' }}>✖</span>}
                           />
                         </TableCell>
                       </TableRow>

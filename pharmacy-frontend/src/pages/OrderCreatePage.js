@@ -14,7 +14,6 @@ import {
   Paper,
   Box,
   Alert,
-  CircularProgress,
 } from "@mui/material";
 import MedicineSearchModal from "../components/MedicineSearchModal";
 import { createOrder } from "../services/api";
@@ -27,110 +26,143 @@ export default function OrderCreatePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // 👤 Capture walk-in customer info
+  // 👤 Walk-in customer info
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
 
   const [openModal, setOpenModal] = useState(false);
   const navigate = useNavigate();
 
-        const handleAddMedicine = (medicine) => {
-      // ✅ Validate incoming medicine object
-      if (!medicine || !medicine.id || typeof medicine.name !== 'string') {
-        console.error("Invalid medicine selected:", medicine);
-        toast.error("Invalid medicine data");
-        return;
-      }
+  // ✅ Add medicine with default quantity = 1
+const handleAddMedicine = (medicine) => {
+  if (!medicine || !medicine.id || typeof medicine.name !== 'string') {
+    toast.error("Invalid medicine data");
+    return;
+  }
 
-      const price = parseFloat(medicine.price);
-      if (isNaN(price)) {
-        toast.error(`Invalid price for ${medicine.name}`);
-        return;
-      }
+  const price = parseFloat(medicine.price);
+  if (isNaN(price)) {
+    toast.error(`Invalid price for ${medicine.name}`);
+    return;
+  }
 
-      // ✅ Add with default quantity = 1
-      setItems((prev) => [
-        ...prev,
-        {
-          medicineId: medicine.id,
-          name: medicine.name,
-          price: price,
-          quantity: 1,
-        },
-      ]);
+  setItems((prev) => [
+    ...prev,
+    {
+      medicineId: medicine.id,
+      name: medicine.name,
+      price,
+      quantity: 1,
+    },
+  ]);
 
-      toast.success(`Added: ${medicine.name}`);
-    };
-
+  toast.success(`Added: ${medicine.name}`);
+};
+  // ✅ Remove medicine by index
   const handleRemoveMedicine = (index) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const calculateTotal = () => {
-    return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // ✅ Update quantity for specific item
+  const handleQuantityChange = (index, newQty) => {
+    if (newQty === '' || isNaN(newQty)) {
+      // Allow empty input temporarily
+      const updated = [...items];
+      updated[index].quantity = '';
+      setItems(updated);
+      return;
+    }
+
+    const qty = parseInt(newQty, 10);
+    if (qty < 1) return; // Prevent zero/negative
+
+    const updated = [...items];
+    updated[index].quantity = qty;
+    setItems(updated);
   };
+
+  // ✅ Calculate total
+  const calculateTotal = () => {
+    return items.reduce((sum, item) => {
+      const qty = typeof item.quantity === 'number' ? item.quantity : 0;
+      return sum + item.price * qty;
+    }, 0);
+  };
+
+  // ✅ Submit order
 const handleSubmit = async () => {
   if (items.length === 0) {
     setError("Please add at least one medicine");
     return;
   }
 
-  const orderData = {
-    customerName: customerName.trim() || "Walk-in Customer",
-    customerPhone: customerPhone.trim() || null,
-    status: "completed",
-    paymentMode: "cash",
-    items: items.map(item => ({
-      medicineId: item.medicineId,
-      quantity: item.quantity
-    }))
-  };
+  // ✅ Validate all items before submit
+  for (let item of items) {
+    if (!item.medicineId || !item.quantity || item.quantity < 1) {
+      toast.error("All items must have valid medicine and quantity ≥ 1");
+      return;
+    }
+  }
 
-  console.log("📦 Submitting order:", orderData);
+ const orderData = {
+  customerName: customerName.trim() || "Walk-in Customer",
+  customerPhone: customerPhone.trim() || null,
+  status: "completed",
+  paymentMode: "cash",
+  items: items.map(item => {
+    // ✅ Double-check during submit
+    if (!item.medicineId) {
+      console.error("❌ Invalid item during submit:", item);
+      throw new Error(`Invalid medicine in order: missing ID for ${item.name}`);
+    }
+    return {
+      id: item.medicineId,        // Backend expects 'id'
+      quantity: Number(item.quantity)
+    };
+  })
+};
+
+  console.log("📦 Submitting order:", orderData); // Debug
   setLoading(true);
   setError("");
 
   try {
     const response = await createOrder(orderData);
-    console.log("✅ Order created:", response.data);
 
-    // ✅ Fix: Extract orderId from response.data.order.id
-    const order = response.data.order;
-    if (!order || !order.id) {
-      throw new Error("No order ID returned from server");
-    }
-
-    const orderId = order.id;
+    const orderId = response.data?.order?.id;
+    if (!orderId) throw new Error("No order ID returned");
 
     toast.success("✅ Order created successfully!");
     navigate(`/receipt/${orderId}`);
   } catch (err) {
-    console.error("❌ Create order failed:", err);
+    console.error("❌ Full error:", err.response?.data);
 
-    if (err.response) {
-      console.error("Response ", err.response.data);
-      setError(`API Error: ${err.response.data.message || "Unknown error"}`);
-    } else if (err.request) {
-      setError("Network error: Check connection or server");
+    const message = err.response?.data?.message || err.message;
+
+    // Show meaningful error
+    if (message.includes("items is required")) {
+      setError("Items are missing or invalid");
+    } else if (message.includes("must be a positive integer")) {
+      setError("Quantity must be a positive number");
+    } else if (message.includes("Medicine not found")) {
+      setError("One or more medicines are invalid or no longer available");
     } else {
-      setError(err.message);
+      setError(message);
     }
 
-    toast.error("❌ Failed to create order");
+    toast.error(`❌ ${message}`);
   } finally {
     setLoading(false);
   }
 };
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
-     
-      <Typography variant="h4" gutterBottom >
-         <ReceiptIcon color="primary" fontSize="large" />
-        Create New Order
-      </Typography>
+      <Box display="flex" alignItems="center" gap={1} mb={3}>
+        <ReceiptIcon color="primary" fontSize="large" />
+        <Typography variant="h4">Create New Order</Typography>
+      </Box>
 
-      {/* 👤 Walk-in Customer Info */}
+      {/* Customer Info */}
       <Paper sx={{ p: 3, mb: 4 }}>
         <Typography variant="subtitle1" gutterBottom>
           Customer Details (Optional)
@@ -165,7 +197,7 @@ const handleSubmit = async () => {
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      {/* 🧾 Order Items Table */}
+      {/* Order Items Table */}
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
@@ -182,7 +214,16 @@ const handleSubmit = async () => {
               <TableRow key={index}>
                 <TableCell>{item.name}</TableCell>
                 <TableCell>${item.price.toFixed(2)}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
+                <TableCell>
+                  <TextField
+                    type="number"
+                    size="small"
+                    value={item.quantity}
+                    onChange={(e) => handleQuantityChange(index, e.target.value)}
+                    inputProps={{ min: 1 }}
+                    sx={{ width: 80 }}
+                  />
+                </TableCell>
                 <TableCell>${(item.price * item.quantity).toFixed(2)}</TableCell>
                 <TableCell>
                   <Button
@@ -206,7 +247,7 @@ const handleSubmit = async () => {
         </Table>
       </TableContainer>
 
-      {/* 💵 Total & Submit */}
+      {/* Total & Submit */}
       <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
         <Typography variant="h6">
           Total: <strong>${calculateTotal().toFixed(2)}</strong>
@@ -217,13 +258,12 @@ const handleSubmit = async () => {
           size="large"
           onClick={handleSubmit}
           disabled={loading || items.length === 0}
-          startIcon={loading && <CircularProgress size={20} />}
         >
           {loading ? "Processing..." : "Complete Order"}
         </Button>
       </Box>
 
-      {/* 🔍 Medicine Search Modal */}
+      {/* Medicine Search Modal */}
       <MedicineSearchModal
         open={openModal}
         onClose={() => setOpenModal(false)}
