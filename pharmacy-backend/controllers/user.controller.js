@@ -110,6 +110,35 @@ class UserController {
       });
     }
   }
+ static async resetUserPassword(req, res){
+  try {
+    const adminId = req.user.id; // from auth middleware
+    const { userId, newPassword } = req.body;
+
+    // Validate request
+    if (!userId || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID and new password are required"
+      });
+    }
+
+    // Perform reset
+    const result = await UserService.resetUserPassword(adminId, userId, newPassword);
+
+    return res.status(200).json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    console.error("Reset password error:", error.message);
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+  
 }
 
 module.exports = UserController;

@@ -207,5 +207,62 @@ router.delete("/:id", authenticate, authorizeRoles("admin"), UserController.dele
  *         description: Forbidden (not admin)
  */
 router.get("/", authenticate, authorizeRoles("admin"), UserController.getAllUsers);
+/**
+ * @swagger
+ * /users/reset-password:
+ *   post:
+ *     summary: Admin resets another user's password
+ *     description: Only admins can reset passwords of other users. No old password required.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - newPassword
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 example: 5
+ *                 description: ID of the user whose password is being reset
+ *               newPassword:
+ *                 type: string
+ *                 example: "NewSecurePass123!"
+ *                 description: The new password (must be at least 6 characters)
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Password reset successfully for user ID: 5"
+ *       400:
+ *         description: Invalid input (e.g., weak password, invalid user ID)
+ *       401:
+ *         description: Unauthorized (missing or invalid token)
+ *       403:
+ *         description: Forbidden (user is not admin)
+ *       404:
+ *         description: User not found
+ */
+router.post(
+  "/reset-password",
+  authenticate,
+  authorizeRoles("admin"),
+  UserController.resetUserPassword
+);
+
 
 module.exports = router;

@@ -24,7 +24,8 @@ api.interceptors.request.use((config) => {
 export const login = (credentials) => api.post("/users/login", credentials);
 export const verifyToken = (token) =>
   token ? Promise.resolve() : Promise.reject(new Error("No token"));
-
+export const resetUserPassword = (userId, newPassword) =>
+  api.post("/users/reset-password", { userId, newPassword });
 // ===== Reports =====
 export const getDailySales = () => api.get("/reports/daily-sales");
 export const getTopMedicines = (limit = 10) => api.get(`/reports/top-medicines?limit=${limit}`);

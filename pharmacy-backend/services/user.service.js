@@ -123,6 +123,34 @@ class UserService {
       throw error;
     }
   }
+
+  // ✅ Admin resets any user's password
+  static async resetUserPassword(adminId, targetUserId, newPassword) {
+    if (!targetUserId || !newPassword || typeof newPassword !== 'string') {
+      throw new Error("User ID and valid password are required");
+    }
+
+    if (newPassword.length < 6) {
+      throw new Error("Password must be at least 6 characters long");
+    }
+
+    const user = await UserRepository.findById(targetUserId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // 🔐 Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await UserRepository.updateUser(targetUserId, { password: hashedPassword });
+
+    return { 
+      success: true, 
+      message: `Password reset successfully for user ID: ${targetUserId}` 
+    };
+  }
+
 }
 
 module.exports = UserService;

@@ -20,20 +20,23 @@ import {
   DialogActions,
   TextField,
   MenuItem,
-  Select,
   FormControl,
   InputLabel,
+  Select,
 } from "@mui/material";
 
 import TableSkeleton from "../components/skeletons/TableSkeleton";
-import { getAllUsers, createUser, updateUserStatus, deleteUser } from "../services/api";
+import { getAllUsers, createUser, updateUserStatus, deleteUser, resetUserPassword } from "../services/api";
 import { toast } from "react-toastify";
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [openModal, setOpenModal] = useState(false);
+  const [openCreateModal, setOpenCreateModal] = useState(false);
+  const [openResetModal, setOpenResetModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -41,50 +44,46 @@ export default function UserManagementPage() {
     role: "pharmacist",
   });
 
-const fetchUsers = async () => {
-  setLoading(true);
-  setError("");
+  const [resetData, setResetData] = useState({
+    newPassword: "",
+    confirmPassword: ""
+  });
 
-  try {
-    const response = await getAllUsers();
+  const fetchUsers = async () => {
+    setLoading(true);
+    setError("");
 
-    // ✅ Handle double-wrapped response
-    let usersData = null;
+    try {
+      const response = await getAllUsers();
 
-    if (Array.isArray(response.data?.users)) {
-      // Case 1: Direct array at response.data.users
-      usersData = response.data.users;
-    } else if (
-      response.data?.users &&
-      Array.isArray(response.data.users.users)
-    ) {
-      // Case 2: Double-wrapped: { success: true, users: { users: [...] } }
-      console.warn("⚠️ Detected double-wrapped users response");
-      usersData = response.data.users.users;
-    } else if (Array.isArray(response.data)) {
-      // Case 3: Raw array
-      usersData = response.data;
-    } else {
-      throw new Error("Invalid data format: 'users' array not found");
+      let usersData = null;
+      if (Array.isArray(response.data?.users)) {
+        usersData = response.data.users;
+      } else if (response.data?.users && Array.isArray(response.data.users.users)) {
+        console.warn("⚠️ Detected double-wrapped users response");
+        usersData = response.data.users.users;
+      } else if (Array.isArray(response.data)) {
+        usersData = response.data;
+      } else {
+        throw new Error("Invalid data format: 'users' array not found");
+      }
+
+      const validUsers = usersData.map(user => ({
+        id: user.id,
+        username: user.username || "Unknown User",
+        email: user.email || "No Email",
+        role: user.role || "user",
+        status: user.status || "active"
+      }));
+
+      setUsers(validUsers);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setError("Failed to load users. Check your connection or contact support.");
+    } finally {
+      setLoading(false);
     }
-
-    // ✅ Validate required fields
-    const validUsers = usersData.map(user => ({
-      id: user.id,
-      username: user.username || "Unknown User",
-      email: user.email || "No Email",
-      role: user.role || "user",
-      status: user.status || "active"
-    }));
-
-    setUsers(validUsers);
-  } catch (err) {
-    console.error("Error fetching users:", err);
-    setError("Failed to load users. Check your connection or contact support.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -108,7 +107,7 @@ const fetchUsers = async () => {
       await createUser(formData);
       toast.success("✅ User created successfully!");
       fetchUsers();
-      setOpenModal(false);
+      setOpenCreateModal(false);
       setFormData({ username: "", email: "", password: "", role: "pharmacist" });
     } catch (err) {
       const msg = err.response?.data?.error || "Failed to create user";
@@ -144,8 +143,41 @@ const fetchUsers = async () => {
     }
   };
 
+  // ✅ Open Reset Password Modal
+  const handleOpenResetModal = (user) => {
+    setSelectedUser(user);
+    setResetData({ newPassword: "", confirmPassword: "" });
+    setOpenResetModal(true);
+  };
+
+  const handleResetPassword = async () => {
+    const { newPassword, confirmPassword } = resetData;
+
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters long");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    try {
+      await resetUserPassword(selectedUser.id, newPassword);
+      toast.success(`✅ Password reset successfully for ${selectedUser.username}`);
+      setOpenResetModal(false);
+    } catch (err) {
+      const msg = err.response?.data?.message || "Failed to reset password";
+      toast.error(`❌ ${msg}`);
+    }
+  };
+
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleResetChange = (e) => {
+    setResetData({ ...resetData, [e.target.name]: e.target.value });
   };
 
   if (loading) {
@@ -181,7 +213,7 @@ const fetchUsers = async () => {
       </Typography>
 
       <Box sx={{ mb: 3 }}>
-        <Button variant="contained" color="primary" onClick={() => setOpenModal(true)}>
+        <Button variant="contained" color="primary" onClick={() => setOpenCreateModal(true)}>
           Create New User
         </Button>
       </Box>
@@ -236,6 +268,14 @@ const fetchUsers = async () => {
                       <Button
                         size="small"
                         variant="outlined"
+                        color="warning"
+                        onClick={() => handleOpenResetModal(user)}
+                      >
+                        Reset Password
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
                         color={user.status === "active" ? "error" : "success"}
                         onClick={() => handleSuspendUser(user.id, user.status)}
                       >
@@ -259,7 +299,7 @@ const fetchUsers = async () => {
       )}
 
       {/* Create User Modal */}
-      <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="sm" fullWidth>
+      <Dialog open={openCreateModal} onClose={() => setOpenCreateModal(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Create New User</DialogTitle>
         <DialogContent>
           <TextField
@@ -311,9 +351,46 @@ const fetchUsers = async () => {
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenModal(false)}>Cancel</Button>
+          <Button onClick={() => setOpenCreateModal(false)}>Cancel</Button>
           <Button onClick={handleCreateUser} variant="contained">
             Create User
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reset Password Modal */}
+      <Dialog open={openResetModal} onClose={() => setOpenResetModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Reset Password — {selectedUser?.username}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            ID: #{selectedUser?.id} | Role: {selectedUser?.role}
+          </Typography>
+          <TextField
+            margin="dense"
+            name="newPassword"
+            label="New Password"
+            type="password"
+            fullWidth
+            value={resetData.newPassword}
+            onChange={handleResetChange}
+            placeholder="Enter new password (min 6 chars)"
+            inputProps={{ minLength: 6 }}
+          />
+          <TextField
+            margin="dense"
+            name="confirmPassword"
+            label="Confirm Password"
+            type="password"
+            fullWidth
+            value={resetData.confirmPassword}
+            onChange={handleResetChange}
+            placeholder="Re-enter to confirm"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenResetModal(false)}>Cancel</Button>
+          <Button onClick={handleResetPassword} variant="contained" color="primary">
+            Reset Password
           </Button>
         </DialogActions>
       </Dialog>
