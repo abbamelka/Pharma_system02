@@ -4,6 +4,14 @@ const { Medicine,Inventory } = require("../models");
 exports.createMedicine = async (req, res) => {
   try {
     const medicine = await medicineService.createMedicine(req.body);
+    // ✅ Log creation
+    await auditService.log(
+      "MEDICINE_CREATE",
+      "Medicine",
+      medicine.id,
+      { name: medicine.name, category: medicine.category },
+      req.user
+    );
     res.status(201).json({
       success: true,
       message: "Medicine created successfully",

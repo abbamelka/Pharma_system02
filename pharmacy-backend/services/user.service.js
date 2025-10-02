@@ -150,6 +150,9 @@ class UserService {
       message: `Password reset successfully for user ID: ${targetUserId}` 
     };
   }
+ static async findById(id) {
+    return await UserRepository.findById(id);
+  }
 
 }
 

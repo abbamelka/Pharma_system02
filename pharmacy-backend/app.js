@@ -55,7 +55,7 @@ app.use("/reports", require("./routes/report.routes"));
 app.use("/suppliers", require("./routes/supplier.routes"));
 app.use("/medicine", require("./routes/medicine.routes"));
 app.use("/receipts", require("./routes/receipt.routes"));
-
+app.use("/audit",require("./routes/audit.routes"));
 
 // app.use("/api/medicines", require("./routes/medicine.routes"));
 // app.use("/api/auth", require("./routes/auth.routes"));

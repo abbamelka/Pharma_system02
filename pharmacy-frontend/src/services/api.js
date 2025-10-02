@@ -99,5 +99,6 @@ export const medicinesApi = { search: searchMedicines };
 export const receiptsApi = { generate: generateReceipt, download: downloadReceipt };
 export const prescriptionsApi = { getPending: getPendingPrescriptions, fulfill: fulfillPrescription, cancel: cancelPrescription, create: createPrescription, search: getCustomerPrescriptions };
 export const inventoryApi = { lowStock: getLowStockAlerts, expiringSoon: getExpiringSoonAlerts };
-
+// ===== Audit Logs =====
+export const getAuditLogs = () => api.get("/audit/logs");
 export default api;

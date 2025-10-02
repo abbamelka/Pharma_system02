@@ -31,6 +31,7 @@ import {
   Logout as LogoutIcon,
   Brightness4 as Brightness4Icon,
   Brightness7 as Brightness7Icon,
+  History as HistoryIcon, // ✅ Add History icon
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -79,14 +80,14 @@ export default function Layout() {
           component="main"
           sx={{
             flexGrow: 1,
-            bgcolor: 'background.default', // ✅ Global background
+            bgcolor: 'background.default',
             color: 'text.primary',
             minHeight: '100vh',
             p: 3
           }}
         >
           <Toolbar />
-          <Outlet /> {/* All pages rendered here */}
+          <Outlet />
         </Box>
       </Box>
     );
@@ -105,6 +106,9 @@ export default function Layout() {
     { text: "Medicine Management", icon: <MedicineIcon />, path: "/medicines/manage", roles: ["admin", "pharmacist"] },
     { text: "Supplier Management", icon: <BusinessIcon />, path: "/suppliers", roles: ["admin", "pharmacist"] },
     { text: "Prescription Management", icon: <DescriptionIcon />, path: "/prescriptions/manage", roles: ["admin", "pharmacist", "doctor"] },
+    
+    // ✅ Add Audit Logs (Admin only)
+    { text: "Audit Logs", icon: <HistoryIcon />, path: "/audit-logs", roles: ["admin"] },
   ];
 
   const filteredMenuItems = menuItems.filter(item =>
@@ -113,7 +117,7 @@ export default function Layout() {
 
   return (
     <Box sx={{ display: "flex" }}>
-      <CssBaseline /> {/* ✅ Applies global theme styles */}
+      <CssBaseline />
 
       {/* Sidebar */}
       <Drawer
@@ -224,19 +228,19 @@ export default function Layout() {
         </Menu>
       </Drawer>
 
-      {/* Main Content – This wraps ALL pages */}
+      {/* Main Content */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          bgcolor: 'background.default', // ✅ Applies globally
+          bgcolor: 'background.default',
           color: 'text.primary',
-          minHeight: '100vh', // Full height
+          minHeight: '100vh',
           p: 3
         }}
       >
         <Toolbar />
-        <Outlet /> {/* All routes render here */}
+        <Outlet />
       </Box>
     </Box>
   );

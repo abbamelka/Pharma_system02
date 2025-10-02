@@ -1,3 +1,5 @@
+// models/index.js
+const { Sequelize, DataTypes } = require("sequelize"); 
 const sequelize = require("../config/db");
 
 // Import models
@@ -8,7 +10,7 @@ const Prescription = require("./prescription");
 const Supplier = require("./supplier");
 const Order = require("./order");
 const OrderMedicine = require("./OrderMedicine");
-
+const AuditLog = require("./AuditLog.model")(sequelize, DataTypes);
 // ========== Associations ==========
 
 // User → Orders
@@ -39,6 +41,21 @@ Medicine.hasMany(OrderMedicine, { foreignKey: "medicineId" });
 // Order → Prescription
 Order.belongsTo(Prescription, { foreignKey: "prescriptionId" });
 
+// ✅ AuditLog → User
+AuditLog.belongsTo(User, { foreignKey: 'performedById', as: 'Performer' });
+// ========== Sync All Models ==========
+const syncModels = async () => {
+  try {
+    await sequelize.sync({ alter: true }); // Use { force: true } only in dev if needed
+    console.log("✅ All models synchronized successfully.");
+  } catch (error) {
+    console.error("❌ Error syncing models:", error.message);
+  }
+};
+
+// Optional: Call sync only once when server starts
+// syncModels();
+
 module.exports = {
   sequelize,
   User,
@@ -48,4 +65,5 @@ module.exports = {
   Supplier,
   Order,
   OrderMedicine,
+  AuditLog, // ✅ Export AuditLog
 };
