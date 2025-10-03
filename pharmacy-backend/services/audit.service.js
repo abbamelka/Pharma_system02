@@ -1,19 +1,16 @@
 // services/audit.service.js
-const db = require("../models"); // ✅ Import full db object (after index.js loads all)
+const db = require("../models"); // ✅ Loads ALL models via index.js
 
 class AuditService {
   async log(action, entity, entityId, details, performer) {
     try {
-      // ✅ Validate performer
       if (!performer || !performer.id) {
         console.warn("Audit log skipped: missing performer identity");
         return;
       }
 
-      // ✅ Fallback username
-      const username = performer.username || performer.email || `User#${performer.id}`;
+      const username = performer.username || `User#${performer.id}`;
 
-      // ✅ Ensure action is allowed
       const validActions = [
         'USER_LOGIN',
         'USER_LOGOUT',
@@ -21,66 +18,47 @@ class AuditService {
         'USER_UPDATE',
         'USER_DELETE',
         'USER_PASSWORD_RESET',
+        'USER_CHANGE_OWN_PASSWORD',
         'USER_STATUS_CHANGE',
-        'MEDICINE_CREATE',
-        'MEDICINE_UPDATE',
-        'ORDER_CREATE',
-        'PRESCRIPTION_FULFILL'
+        'USER_ACCESS_USER_LIST'
       ];
 
       if (!validActions.includes(action)) {
-        console.warn(`Invalid audit action ignored: ${action}`);
+        console.warn(`🚫 Invalid audit action ignored: ${action}`);
         return;
       }
 
-      // ✅ Create log
+      // ✅ Critical: Ensure db.AuditLog is defined
+      if (!db.AuditLog) {
+        console.error("❌ db.AuditLog is undefined – model not loaded!");
+        return;
+      }
+
       await db.AuditLog.create({
         action,
         entity,
         entityId,
         details,
         performedById: performer.id,
-        performedByUsername: username // ✅ Never null
+        performedByUsername: username
       });
 
-      console.log(`📝 Audit logged: ${action} by ${username}`);
+      console.log(`✅ Audit logged: ${action} by ${username}`);
     } catch (err) {
-      console.error("❌ Failed to write audit log:", err.message);
-      // 🛑 Never throw — don't break business logic
-    }
-  }
-
-  async getUserLogs(userId) {
-    try {
-      return await db.AuditLog.findAll({
-        where: { performedById: userId },
-        include: [{
-          model: db.User,
-          as: 'Performer',
-          attributes: ['username', 'role']
-        }],
-        order: [['createdAt', 'DESC']],
-        limit: 50
-      });
-    } catch (err) {
-      console.error("Failed to fetch user logs:", err.message);
-      return [];
+      console.error("❌ DATABASE ERROR when writing audit log:", err.message);
+      if (err.errors) console.error("Validation errors:", err.errors);
     }
   }
 
   async getAllLogs(limit = 100) {
     try {
       return await db.AuditLog.findAll({
-        include: [{
-          model: db.User,
-          as: 'Performer',
-          attributes: ['username', 'role']
-        }],
+        include: [{ model: db.User, as: 'Performer', attributes: ['username', 'role'] }],
         order: [['createdAt', 'DESC']],
         limit
       });
     } catch (err) {
-      console.error("Failed to fetch all logs:", err.message);
+      console.error("Failed to fetch logs:", err.message);
       return [];
     }
   }

@@ -45,7 +45,7 @@ class UserController {
         user.id,
         { 
           ip: req.ip, 
-          userAgent: req.get('User-Agent').substring(0, 255) // Truncate long string
+          userAgent: req.get('User-Agent').substring(0, 255)
         },
         { id: user.id, username: user.username }
       );
@@ -57,7 +57,6 @@ class UserController {
         user
       });
     } catch (err) {
-      // 🛑 Do NOT log failed logins to avoid spamming DB
       return res.status(401).json({
         success: false,
         error: err.message
@@ -116,8 +115,9 @@ class UserController {
       const result = await UserService.updateUserStatus(id, status);
 
       if (result.success) {
+        // ✅ Must use exact string from model validation list
         await auditService.log(
-          "USER_STATUS_CHANGE",
+          "USER_STATUS_CHANGE",           // 🔥 This must match exactly
           "User",
           id,
           { oldStatus: user.status, newStatus: status },
@@ -139,21 +139,6 @@ class UserController {
   static async getAllUsers(req, res) {
     try {
       const users = await UserService.getAllUsers();
-
-      // ✅ Only attempt log if req.user exists
-      if (req.user) {
-        await auditService.log(
-          "USER_ACCESS_USER_LIST", // ← Must be in model validation list!
-          "User",
-          null,
-          { count: users.length },
-          {
-            id: req.user.id,
-            username: req.user.username || req.user.email?.split("@")[0] || `User${req.user.id}`
-          }
-        );
-      }
-
       return res.json({
         success: true,
         count: users.length,
@@ -226,7 +211,7 @@ class UserController {
 
       if (result.success) {
         await auditService.log(
-          "USER_PASSWORD_RESET", // Admin-initiated reset
+          "USER_PASSWORD_RESET",         // 🔥 Must be in allowed list
           "User",
           userId,
           { initiatedBy: req.user.username, targetUsername: targetUser.username },

@@ -1,28 +1,21 @@
-// models/AuditLog.model.js
 module.exports = (sequelize, DataTypes) => {
   const AuditLog = sequelize.define("AuditLog", {
     action: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        // ✅ Fix: Use flat array for isIn
         isIn: {
-          args: [
-'USER_LOGIN',
-      'USER_LOGOUT',
-      'USER_CREATE',
-      'USER_UPDATE',
-      'USER_DELETE',
-      'USER_PASSWORD_RESET',
-      'USER_CHANGE_OWN_PASSWORD', // ← if you added it
-      'USER_STATUS_CHANGE',
-      'USER_ACCESS_USER_LIST',   // ✅ ADD THIS LINE
-      'MEDICINE_CREATE',
-      'MEDICINE_UPDATE',
-      'ORDER_CREATE',
-      'PRESCRIPTION_FULFILL'
-
-          ],
+          args: [[
+            'USER_LOGIN',
+            'USER_LOGOUT',
+            'USER_CREATE',
+            'USER_UPDATE',
+            'USER_DELETE',
+            'USER_PASSWORD_RESET',
+            'USER_CHANGE_OWN_PASSWORD',
+            'USER_STATUS_CHANGE',
+            'USER_ACCESS_USER_LIST'
+          ]],
           msg: "Invalid action type"
         }
       }
@@ -49,16 +42,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     performedByUsername: {
       type: DataTypes.STRING,
-      allowNull: false,
-      // ✅ Add length constraint
-      validate: {
-        len: [1, 255]
-      }
+      allowNull: false
     }
   }, {
     tableName: 'audit_logs',
-    timestamps: true,
-    // ✅ Enable createdAt/updatedAt
+    timestamps: true
   });
 
   return AuditLog;

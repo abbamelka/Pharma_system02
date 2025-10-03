@@ -1,4 +1,3 @@
-// src/pages/AuditLogPage.js
 import React, { useEffect, useState } from "react";
 import {
   Container,
@@ -14,7 +13,8 @@ import {
   Alert,
   CircularProgress,
   Chip,
-  Tooltip
+  Stack,
+  Pagination
 } from "@mui/material";
 import { getAuditLogs } from "../services/api";
 
@@ -22,21 +22,46 @@ export default function AuditLogPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0
+  });
+
+  const fetchLogs = async (page = 1) => {
+    setLoading(true);
+    try {
+      const response = await getAuditLogs(page, 10);
+
+      // ✅ filter out unwanted logs
+      const filteredLogs = response.data.logs.filter(
+        log => log.action !== "USER_ACCESS_USER_LIST"
+      );
+
+      // ✅ adjust pagination counts to match filtered logs
+      setLogs(filteredLogs);
+      setPagination({
+        ...response.data.pagination,
+        totalItems: filteredLogs.length,
+        totalPages: Math.ceil(filteredLogs.length / 10) || 1,
+        currentPage: page
+      });
+    } catch (err) {
+      setError("Failed to load audit logs");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const response = await getAuditLogs();
-        setLogs(response.data.logs || []);
-      } catch (err) {
-        console.error("Failed to load audit logs:", err);
-        setError("Could not load audit logs. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchLogs();
+    fetchLogs(pagination.currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handlePageChange = (e, value) => {
+    fetchLogs(value);
+    setPagination(prev => ({ ...prev, currentPage: value }));
+  };
 
   if (loading) {
     return (
@@ -59,9 +84,6 @@ export default function AuditLogPage() {
       <Typography variant="h4" gutterBottom>
         🔍 Audit Logs
       </Typography>
-      <Typography variant="body1" color="textSecondary" gutterBottom>
-        Track all critical actions performed in the system.
-      </Typography>
 
       <TableContainer component={Paper}>
         <Table size="small">
@@ -78,7 +100,7 @@ export default function AuditLogPage() {
           <TableBody>
             {logs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ color: 'text.secondary' }}>
+                <TableCell colSpan={6} align="center" sx={{ color: "text.secondary" }}>
                   No audit logs found.
                 </TableCell>
               </TableRow>
@@ -89,25 +111,22 @@ export default function AuditLogPage() {
                     <Chip
                       label={log.action.replace(/_/g, " ")}
                       color={
-                        ["USER_PASSWORD_RESET", "USER_DELETE", "USER_STATUS_CHANGE_SUSPEND"]
-                          .includes(log.action)
+                        ["PASSWORD_RESET", "DELETE", "SUSPEND"].some(x =>
+                          log.action.includes(x)
+                        )
                           ? "error"
                           : log.action.includes("CREATE") || log.action.includes("FULFILL")
-                            ? "success"
-                            : "info"
+                          ? "success"
+                          : "info"
                       }
                       size="small"
                     />
                   </TableCell>
                   <TableCell>{log.entity}</TableCell>
                   <TableCell>{log.entityId || "N/A"}</TableCell>
+                  <TableCell>{log.performedByUsername}</TableCell>
                   <TableCell>
-                    <Tooltip title={log.performer?.role || "Unknown role"}>
-                      <span>{log.performedByUsername}</span>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>
-                    <pre style={{ margin: 0, fontSize: '0.8em', color: '#666', wordBreak: 'break-word' }}>
+                    <pre style={{ margin: 0, fontSize: "0.8em", color: "#666" }}>
                       {JSON.stringify(log.details, null, 2)}
                     </pre>
                   </TableCell>
@@ -120,6 +139,21 @@ export default function AuditLogPage() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Pagination */}
+      <Stack spacing={2} mt={3} alignItems="center">
+        <Pagination
+          count={pagination.totalPages}
+          page={pagination.currentPage}
+          onChange={handlePageChange}
+          color="primary"
+          showFirstButton
+          showLastButton
+        />
+        <Typography variant="body2" color="textSecondary">
+          Page {pagination.currentPage} of {pagination.totalPages} • Total: {pagination.totalItems} logs
+        </Typography>
+      </Stack>
     </Container>
   );
 }
