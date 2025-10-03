@@ -1,12 +1,11 @@
-// controllers/order.controller.js
 const orderService = require("../services/order.service");
+const auditService = require("../services/audit.service");
 
 exports.createOrder = async (req, res) => {
   try {
     const cashierId = req.user.id; // from JWT middleware
     const { items, prescriptionId, status, customerName, customerPhone } = req.body;
 
-    // Optional: set default name
     const finalCustomerName = customerName?.trim() || "Walk-in Customer";
 
     const order = await orderService.createOrder({
@@ -17,6 +16,15 @@ exports.createOrder = async (req, res) => {
       customerName: finalCustomerName,
       customerPhone: customerPhone || null
     });
+
+    // ✅ Audit log
+    await auditService.log(
+      "ORDER_CREATE",
+      "Order",
+      order.id,
+      { itemsCount: items.length, status, customerName: finalCustomerName },
+      req.user
+    );
 
     res.status(201).json({
       success: true,
@@ -41,6 +49,16 @@ exports.getOrderById = async (req, res) => {
         message: "Order not found"
       });
     }
+
+    // ✅ Audit log
+    await auditService.log(
+      "ORDER_VIEW",
+      "Order",
+      order.id,
+      { status: order.status, customerName: order.customerName },
+      req.user
+    );
+
     res.json({
       success: true,
       order
@@ -56,6 +74,16 @@ exports.getOrderById = async (req, res) => {
 exports.getAllOrders = async (req, res) => {
   try {
     const orders = await orderService.getAllOrders();
+
+    // ✅ Audit log
+    await auditService.log(
+      "ORDER_LIST",
+      "Order",
+      null,
+      { totalOrders: orders.length },
+      req.user
+    );
+
     res.json({
       success: true,
       orders
@@ -72,6 +100,15 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const order = await orderService.updateOrderStatus(req.params.id, status);
+
+    // ✅ Audit log
+    await auditService.log(
+      "ORDER_UPDATE_STATUS",
+      "Order",
+      order.id,
+      { newStatus: status },
+      req.user
+    );
 
     res.json({
       success: true,

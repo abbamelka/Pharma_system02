@@ -1,5 +1,5 @@
-// controllers/prescription.controller.js
 const prescriptionService = require("../services/prescription.service");
+const auditService = require("../services/audit.service");
 
 exports.createPrescription = async (req, res) => {
   try {
@@ -7,6 +7,16 @@ exports.createPrescription = async (req, res) => {
       ...req.body,
       doctorId: req.user.id
     });
+
+    // ✅ Audit log
+    await auditService.log(
+      "PRESCRIPTION_CREATE",
+      "Prescription",
+      prescription.id,
+      { doctorId: req.user.id, customerName: req.body.customerName },
+      req.user
+    );
+
     res.status(201).json({
       success: true,
       message: "Prescription created successfully",
@@ -27,6 +37,15 @@ exports.fulfillPrescription = async (req, res) => {
 
     const result = await prescriptionService.fulfillPrescription(prescriptionId, cashierId);
 
+    // ✅ Audit log
+    await auditService.log(
+      "PRESCRIPTION_FULFILL",
+      "Prescription",
+      prescriptionId,
+      { cashierId, orderId: result?.order?.id },
+      req.user
+    );
+
     res.json({
       success: true,
       message: "Prescription fulfilled and order created",
@@ -43,6 +62,16 @@ exports.fulfillPrescription = async (req, res) => {
 exports.getPendingPrescriptions = async (req, res) => {
   try {
     const prescriptions = await prescriptionService.getPendingPrescriptions();
+
+    // ✅ Audit log
+    await auditService.log(
+      "PRESCRIPTION_PENDING_LIST",
+      "Prescription",
+      null,
+      { count: prescriptions.length },
+      req.user
+    );
+
     res.json({
       success: true,
       prescriptions
@@ -59,7 +88,6 @@ exports.getPrescriptionById = async (req, res) => {
   try {
     const prescription = await prescriptionService.getPrescriptionById(req.params.id);
 
-    // ✅ Sanitize response to avoid null reference
     const response = {
       ...prescription.toJSON()
     };
@@ -67,6 +95,15 @@ exports.getPrescriptionById = async (req, res) => {
     if (!response.doctor) {
       response.doctor = null;
     }
+
+    // ✅ Audit log
+    await auditService.log(
+      "PRESCRIPTION_VIEW",
+      "Prescription",
+      prescription.id,
+      { doctorId: prescription.doctorId },
+      req.user
+    );
 
     res.json({
       success: true,
@@ -83,6 +120,16 @@ exports.getPrescriptionById = async (req, res) => {
 exports.cancelPrescription = async (req, res) => {
   try {
     await prescriptionService.cancelPrescription(req.params.id);
+
+    // ✅ Audit log
+    await auditService.log(
+      "PRESCRIPTION_CANCEL",
+      "Prescription",
+      req.params.id,
+      { reason: req.body?.reason || "No reason provided" },
+      req.user
+    );
+
     res.json({
       success: true,
       message: "Prescription cancelled successfully"
@@ -106,7 +153,19 @@ exports.searchPrescriptions = async (req, res) => {
       });
     }
 
-    const prescriptions = await prescriptionService.searchPrescriptions({ customerName: name, customerPhone: phone });
+    const prescriptions = await prescriptionService.searchPrescriptions({
+      customerName: name,
+      customerPhone: phone
+    });
+
+    // ✅ Audit log
+    await auditService.log(
+      "PRESCRIPTION_SEARCH",
+      "Prescription",
+      null,
+      { name, phone, results: prescriptions.length },
+      req.user
+    );
 
     res.json({
       success: true,

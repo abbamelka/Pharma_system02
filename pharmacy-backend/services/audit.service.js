@@ -1,5 +1,4 @@
-// services/audit.service.js
-const db = require("../models"); // ✅ Loads ALL models via index.js
+const db = require("../models");
 
 class AuditService {
   async log(action, entity, entityId, details, performer) {
@@ -12,6 +11,7 @@ class AuditService {
       const username = performer.username || `User#${performer.id}`;
 
       const validActions = [
+        // User actions
         'USER_LOGIN',
         'USER_LOGOUT',
         'USER_CREATE',
@@ -20,7 +20,38 @@ class AuditService {
         'USER_PASSWORD_RESET',
         'USER_CHANGE_OWN_PASSWORD',
         'USER_STATUS_CHANGE',
-        'USER_ACCESS_USER_LIST'
+        'USER_ACCESS_USER_LIST',
+
+        // Medicine actions
+        'MEDICINE_CREATE',
+        'MEDICINE_UPDATE',
+        'MEDICINE_DELETE',
+        'MEDICINE_VIEW',
+        'MEDICINE_SEARCH',
+
+        // Inventory actions
+        'INVENTORY_ADD',
+        'VIEW_LOW_STOCK',
+        'VIEW_EXPIRING_SOON',
+         // ✅ Order actions
+        'ORDER_CREATE',
+        'ORDER_VIEW',
+        'ORDER_LIST',
+        'ORDER_UPDATE_STATUS',
+         // ✅ Prescription actions
+        'PRESCRIPTION_CREATE',
+        'PRESCRIPTION_FULFILL',
+        'PRESCRIPTION_PENDING_LIST',
+        'PRESCRIPTION_VIEW',
+        'PRESCRIPTION_CANCEL',
+        'PRESCRIPTION_SEARCH',
+          // ✅ Supplier actions
+        'SUPPLIER_CREATE',
+        'SUPPLIER_LIST',
+        'SUPPLIER_VIEW',
+        'SUPPLIER_UPDATE',
+        'SUPPLIER_DELETE',
+        'SUPPLIER_SEARCH'
       ];
 
       if (!validActions.includes(action)) {
@@ -28,7 +59,6 @@ class AuditService {
         return;
       }
 
-      // ✅ Critical: Ensure db.AuditLog is defined
       if (!db.AuditLog) {
         console.error("❌ db.AuditLog is undefined – model not loaded!");
         return;
