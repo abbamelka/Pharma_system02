@@ -170,7 +170,7 @@ useEffect(() => {
 
         <Box sx={{ mt: 3, p: 2, backgroundColor: "#f5f5f5" }}>
           <Typography variant="h6">Subtotal: ${receipt.subtotal}</Typography>
-          <Typography>Tax (5%): ${receipt.tax}</Typography>
+          <Typography>Tax (15%): ${receipt.tax}</Typography>
           <Typography variant="h5">TOTAL: ${receipt.total}</Typography>
         </Box>
 
