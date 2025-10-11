@@ -1,4 +1,3 @@
-// routes/order.routes.js
 const express = require("express");
 const router = express.Router();
 const OrderController = require("../controllers/order.controller");
@@ -16,13 +15,17 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
  * /orders:
  *   post:
  *     summary: Create a new order (walk-in customer)
+ *     description: |
+ *       Creates a new pharmacy order for a walk-in customer.
+ *       - If any medicine requires a prescription, a prescription photo must be uploaded.
+ *       - The request must be sent as **multipart/form-data** when uploading images.
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -30,33 +33,24 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
  *             properties:
  *               customerName:
  *                 type: string
- *                 nullable: true
- *                 description: Name of walk-in customer (optional)
+ *                 example: "John Doe"
+ *                 description: Optional walk-in customer name
  *               customerPhone:
  *                 type: string
- *                 nullable: true
- *                 description: Phone number of walk-in customer (optional)
- *               prescriptionId:
- *                 type: integer
- *                 nullable: true
- *                 description: Optional prescription linked to this order
+ *                 example: "+251912345678"
+ *                 description: Optional customer phone number
  *               status:
  *                 type: string
  *                 enum: [pending, completed, cancelled]
  *                 default: pending
  *               items:
- *                 type: array
- *                 items:
- *                   type: object
- *                   required:
- *                     - medicineId
- *                     - quantity
- *                   properties:
- *                     medicineId:
- *                       type: integer
- *                     quantity:
- *                       type: integer
- *                       minimum: 1
+ *                 type: string
+ *                 description: JSON array of medicineId and quantity objects
+ *                 example: '[{"id":1,"quantity":2},{"id":3,"quantity":1}]'
+ *               prescriptionPhoto:
+ *                 type: string
+ *                 format: binary
+ *                 description: Upload prescription photo (required if medicines need one)
  *     responses:
  *       201:
  *         description: Order created successfully
@@ -67,16 +61,23 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
- *                 data:
+ *                   example: "Order created successfully"
+ *                 order:
  *                   $ref: '#/components/schemas/Order'
  *       400:
- *         description: Bad request (e.g., insufficient stock, invalid item)
+ *         description: Bad request (e.g., insufficient stock, missing prescription)
  *       401:
  *         description: Unauthorized
  */
-router.post("/", authenticate, authorizeRoles("cashier", "admin", "pharmacist"), OrderController.createOrder);
+router.post(
+  "/",
+  authenticate,
+  authorizeRoles("cashier", "admin", "pharmacist"),
+  OrderController.createOrder
+);
 
 /**
  * @swagger
@@ -96,6 +97,7 @@ router.post("/", authenticate, authorizeRoles("cashier", "admin", "pharmacist"),
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 data:
  *                   type: array
  *                   items:
@@ -103,7 +105,12 @@ router.post("/", authenticate, authorizeRoles("cashier", "admin", "pharmacist"),
  *       401:
  *         description: Unauthorized
  */
-router.get("/", authenticate, authorizeRoles("admin", "pharmacist", "cashier"), OrderController.getAllOrders);
+router.get(
+  "/",
+  authenticate,
+  authorizeRoles("admin", "pharmacist", "cashier"),
+  OrderController.getAllOrders
+);
 
 /**
  * @swagger
@@ -130,6 +137,7 @@ router.get("/", authenticate, authorizeRoles("admin", "pharmacist", "cashier"), 
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 data:
  *                   $ref: '#/components/schemas/Order'
  *       404:
@@ -137,7 +145,12 @@ router.get("/", authenticate, authorizeRoles("admin", "pharmacist", "cashier"), 
  *       401:
  *         description: Unauthorized
  */
-router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist", "cashier"), OrderController.getOrderById);
+router.get(
+  "/:id",
+  authenticate,
+  authorizeRoles("admin", "pharmacist", "cashier"),
+  OrderController.getOrderById
+);
 
 /**
  * @swagger
@@ -166,6 +179,7 @@ router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist", "cashier"
  *               status:
  *                 type: string
  *                 enum: [pending, completed, cancelled]
+ *                 example: completed
  *     responses:
  *       200:
  *         description: Order status updated successfully
@@ -176,17 +190,24 @@ router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist", "cashier"
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "Order status updated successfully"
  *                 data:
  *                   $ref: '#/components/schemas/Order'
  *       400:
- *         description: Bad request (e.g., insufficient stock when marking as completed)
+ *         description: Invalid status or stock issue
  *       401:
  *         description: Unauthorized
  *       404:
  *         description: Order not found
  */
-router.patch("/:id/status", authenticate, authorizeRoles("cashier", "admin", "pharmacist"), OrderController.updateOrderStatus);
+router.patch(
+  "/:id/status",
+  authenticate,
+  authorizeRoles("cashier", "admin", "pharmacist"),
+  OrderController.updateOrderStatus
+);
 
 module.exports = router;

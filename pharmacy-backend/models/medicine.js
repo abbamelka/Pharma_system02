@@ -41,6 +41,12 @@ const Medicine = sequelize.define("Medicine", {
     type: DataTypes.DATE,
     allowNull: false,
   },
+  // ✅ NEW: Flag if prescription is required
+  requiresPrescription: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false
+  }
 });
 
 // ❗ Associations moved to index.js

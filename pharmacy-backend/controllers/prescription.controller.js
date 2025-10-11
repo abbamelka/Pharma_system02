@@ -1,3 +1,5 @@
+// src/controllers/prescription.controller.js
+const { Prescription, User, Medicine } = require("../models"); // ✅ Import models
 const prescriptionService = require("../services/prescription.service");
 const auditService = require("../services/audit.service");
 
@@ -8,7 +10,6 @@ exports.createPrescription = async (req, res) => {
       doctorId: req.user.id
     });
 
-    // ✅ Audit log
     await auditService.log(
       "PRESCRIPTION_CREATE",
       "Prescription",
@@ -23,6 +24,7 @@ exports.createPrescription = async (req, res) => {
       prescription
     });
   } catch (error) {
+    console.error("Create prescription error:", error.message);
     res.status(400).json({
       success: false,
       message: error.message
@@ -32,29 +34,66 @@ exports.createPrescription = async (req, res) => {
 
 exports.fulfillPrescription = async (req, res) => {
   try {
-    const cashierId = req.user.id;
     const { id: prescriptionId } = req.params;
 
-    const result = await prescriptionService.fulfillPrescription(prescriptionId, cashierId);
+    // Find prescription
+    const prescription = await Prescription.findByPk(prescriptionId);
+    if (!prescription) {
+      return res.status(404).json({
+        success: false,
+        message: "Prescription not found"
+      });
+    }
 
-    // ✅ Audit log
+    // Check role: only pharmacists/admins can fulfill
+    if (!["pharmacist", "admin"].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to fulfill prescriptions"
+      });
+    }
+
+    // Only allow pending prescriptions
+    if (prescription.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Only pending prescriptions can be fulfilled"
+      });
+    }
+
+    // Expired?
+    if (prescription.validUntil && new Date() > new Date(prescription.validUntil)) {
+      return res.status(400).json({
+        success: false,
+        message: "Prescription has expired"
+      });
+    }
+
+    // ✅ Simple: Just update status
+    await prescription.update({ status: "fulfilled" });
+
+    // Log audit
     await auditService.log(
       "PRESCRIPTION_FULFILL",
       "Prescription",
-      prescriptionId,
-      { cashierId, orderId: result?.order?.id },
+      prescription.id,
+      { fulfilledBy: req.user.id },
       req.user
     );
 
-    res.json({
+    return res.json({
       success: true,
-      message: "Prescription fulfilled and order created",
-      result
+      message: "✅ Prescription marked as fulfilled",
+      prescription: {
+        ...prescription.toJSON(),
+        status: "fulfilled"
+      }
     });
   } catch (error) {
-    res.status(400).json({
+    console.error("Fulfill prescription error:", error.message);
+    return res.status(500).json({
       success: false,
-      message: error.message
+      message: "Failed to fulfill prescription"
     });
   }
 };
@@ -63,7 +102,6 @@ exports.getPendingPrescriptions = async (req, res) => {
   try {
     const prescriptions = await prescriptionService.getPendingPrescriptions();
 
-    // ✅ Audit log
     await auditService.log(
       "PRESCRIPTION_PENDING_LIST",
       "Prescription",
@@ -86,17 +124,54 @@ exports.getPendingPrescriptions = async (req, res) => {
 
 exports.getPrescriptionById = async (req, res) => {
   try {
-    const prescription = await prescriptionService.getPrescriptionById(req.params.id);
+    const { id } = req.params;
 
-    const response = {
-      ...prescription.toJSON()
-    };
+    const prescription = await Prescription.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'doctor',
+          attributes: ['id', 'username']
+        }
+      ]
+    });
 
-    if (!response.doctor) {
-      response.doctor = null;
+    if (!prescription) {
+      return res.status(404).json({
+        success: false,
+        message: "Prescription not found"
+      });
     }
 
-    // ✅ Audit log
+    // Enrich with medicine names
+    let medicineDetails = [];
+    if (Array.isArray(prescription.medicines) && prescription.medicines.length > 0) {
+      const medicineIds = prescription.medicines.map(m => m.medicineId);
+      const medicines = await Medicine.findAll({
+        where: { id: medicineIds },
+        attributes: ['id', 'name', 'dosageForm', 'strength']
+      });
+
+      const map = {};
+      medicines.forEach(m => { map[m.id] = m; });
+
+      medicineDetails = prescription.medicines.map(item => {
+        const med = map[item.medicineId];
+        return {
+          medicineId: item.medicineId,
+          medicineName: med?.name || 'Unknown',
+          dosageForm: med?.dosageForm || '',
+          strength: med?.strength || '',
+          quantity: item.quantity
+        };
+      });
+    }
+
+    const response = {
+      ...prescription.toJSON(),
+      medicineDetails
+    };
+
     await auditService.log(
       "PRESCRIPTION_VIEW",
       "Prescription",
@@ -110,9 +185,10 @@ exports.getPrescriptionById = async (req, res) => {
       prescription: response
     });
   } catch (error) {
-    res.status(404).json({
+    console.error("Get prescription error:", error);
+    res.status(500).json({
       success: false,
-      message: error.message
+      message: "Error fetching prescription"
     });
   }
 };
@@ -121,12 +197,11 @@ exports.cancelPrescription = async (req, res) => {
   try {
     await prescriptionService.cancelPrescription(req.params.id);
 
-    // ✅ Audit log
     await auditService.log(
       "PRESCRIPTION_CANCEL",
       "Prescription",
       req.params.id,
-      { reason: req.body?.reason || "No reason provided" },
+      { reason: req.body.reason || "No reason provided" },
       req.user
     );
 
@@ -158,7 +233,6 @@ exports.searchPrescriptions = async (req, res) => {
       customerPhone: phone
     });
 
-    // ✅ Audit log
     await auditService.log(
       "PRESCRIPTION_SEARCH",
       "Prescription",

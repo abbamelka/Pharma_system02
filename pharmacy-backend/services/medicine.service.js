@@ -5,6 +5,10 @@ const inventoryRepo = require("../repositories/inventory.repository");
 class MedicineService {
   async createMedicine(data) {
     const { inventories, ...medicineData } = data;
+
+    // ✅ Sanitize requiresPrescription
+    medicineData.requiresPrescription = !!medicineData.requiresPrescription;
+
     const medicine = await medicineRepo.create(medicineData);
 
     if (inventories && Array.isArray(inventories)) {
@@ -31,6 +35,12 @@ class MedicineService {
 
   async updateMedicine(id, data) {
     const med = await this.getMedicineById(id);
+
+    // ✅ Sanitize requiresPrescription
+    if ('requiresPrescription' in data) {
+      data.requiresPrescription = !!data.requiresPrescription;
+    }
+
     return await medicineRepo.update(id, data);
   }
 
@@ -56,10 +66,10 @@ class MedicineService {
     return await inventoryRepo.findExpiringSoon(days);
   }
 
-  // 🔍 New: Search & Filter Medicines
+  // 🔍 Search & Filter Medicines
   async searchMedicines(filters = {}) {
-  const result = await medicineRepo.searchAndFilter(filters);
-  return result;
+    const result = await medicineRepo.searchAndFilter(filters);
+    return result;
   }
 
   async searchMedicinesByName(name) {

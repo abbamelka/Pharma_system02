@@ -306,7 +306,7 @@ router.get("/expiring-soon", authenticate, authorizeRoles("admin", "pharmacist")
  *       500:
  *         description: Server error
  */
-router.get("/search", authenticate, authorizeRoles("admin", "pharmacist", "cashier"), medicineController.searchMedicines);
+router.get("/search", authenticate, authorizeRoles("admin", "pharmacist", "cashier","doctor"), medicineController.searchMedicines);
 
 /**
  * @swagger

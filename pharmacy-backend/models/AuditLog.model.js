@@ -61,7 +61,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     details: {
-      type: DataTypes.JSONB,
+      type: DataTypes.JSON,
       defaultValue: {}
     },
     performedById: {

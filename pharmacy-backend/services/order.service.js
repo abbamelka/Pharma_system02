@@ -44,6 +44,10 @@ class OrderService {
     }
   }
 
+  /**
+   * Creates a new order.
+   * If any medicine requires a prescription, `prescriptionPhoto` must be provided.
+   */
   async createOrder(orderData) {
     const {
       items,
@@ -51,7 +55,8 @@ class OrderService {
       prescriptionId,
       status = "pending",
       customerName,
-      customerPhone
+      customerPhone,
+      prescriptionPhoto
     } = orderData;
 
     // Validate input
@@ -65,12 +70,34 @@ class OrderService {
       throw new Error("Cashier not found");
     }
 
-    // Validate and enrich items
+    // Fetch all medicines
+    const medicineIds = items.map(i => i.medicineId || i.id);
+    const medicines = await Medicine.findAll({
+      where: { id: { [Op.in]: medicineIds } }
+    });
+
+    const medicineMap = {};
+    medicines.forEach(med => {
+      medicineMap[med.id] = med;
+    });
+
+    // ✅ Check if any medicine requires prescription
+    const requiresPrescription = items.some(item => {
+      const medicineId = item.medicineId || item.id;
+      const med = medicineMap[medicineId];
+      return med && med.requiresPrescription === true;
+    });
+
+    // ✅ Enforce photo if needed
+    if (requiresPrescription && !prescriptionPhoto) {
+      throw new Error("One or more medicines require a prescription. Please upload a clear photo of the prescription.");
+    }
+
+    // Validate & enrich items
     const validatedItems = [];
     let total = 0;
 
     for (const item of items) {
-      // ✅ FIX: Support both 'id' and 'medicineId'
       const medicineId = item.medicineId || item.id;
       const quantity = item.quantity;
 
@@ -95,14 +122,15 @@ class OrderService {
       total += lineTotal;
     }
 
-    // Create order
+    // ✅ Create order
     const order = await orderRepository.create({
       total: parseFloat(total.toFixed(2)),
       status,
       cashierId,
-      prescriptionId,
+      prescriptionId: prescriptionId ? parseInt(prescriptionId) : null,
       customerName: customerName || "Walk-in Customer",
-      customerPhone: customerPhone || null
+      customerPhone: customerPhone || null,
+      prescriptionPhoto: prescriptionPhoto || null
     });
 
     // Link medicines
@@ -123,7 +151,6 @@ class OrderService {
       await this.deductStock(validatedItems);
     }
 
-    // Return full order with associations
     return await orderRepository.findById(order.id, true);
   }
 

@@ -3,7 +3,15 @@ const { Order, OrderMedicine, Medicine, Inventory } = require("../models");
 
 class OrderRepository {
   async create(orderData) {
-    return await Order.create(orderData);
+    console.log("📦 OrderRepository.create() input:", orderData); // DEBUG
+    try {
+      const order = await Order.create(orderData);
+      console.log("✅ Order created:", order.toJSON());
+      return order;
+    } catch (error) {
+      console.error("❌ Order creation failed:", error.name, error.message);
+      throw error;
+    }
   }
 
   async findById(id, includeDetails = false) {
@@ -36,8 +44,13 @@ class OrderRepository {
   async getAllOrders() {
     return await Order.findAll({
       include: [
-        { model: OrderMedicine, as: "OrderMedicines" }
-      ]
+        { 
+          model: OrderMedicine, 
+          as: "OrderMedicines",
+          include: [{ model: Medicine, as: "Medicine" }] 
+        }
+      ],
+      order: [['createdAt', 'DESC']]
     });
   }
 }

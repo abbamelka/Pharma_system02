@@ -28,9 +28,9 @@ const Prescription = sequelize.define("Prescription", {
     comment: 'Phone number for contact'
   },
   details: {
-    type: DataTypes.TEXT,
+    type: DataTypes.JSON,
     allowNull: false,
-    comment: 'Format: medicineId:quantity, e.g., "3:2,7:1"'
+    comment: 'Array of medicines with quantity'
   },
   dosage: {
     type: DataTypes.STRING(100),

@@ -1,44 +1,62 @@
-// services/prescription.service.js
+// src/services/prescription.service.js
 const prescriptionRepo = require("../repositories/prescription.repository");
-const orderService = require("./order.service"); // ← instance, not class
-const { User } = require("../models");
+const orderService = require("./order.service");
+const { User, Medicine } = require("../models");
 
 class PrescriptionService {
   async createPrescription(data) {
-    const { doctorId, customerName, customerPhone, details, dosage, frequency, duration, validUntil } = data;
+    const {
+      doctorId,
+      customerName,
+      customerPhone,
+      medicines, // ← structured array from frontend
+      dosage,
+      frequency,
+      duration,
+      validUntil
+    } = data;
 
-    // Validate doctor exists and is actually a doctor
+    // Validate doctor
     const doctor = await User.findByPk(doctorId);
-    if (!doctor || doctor.role !== "doctor") {
-      throw new Error("Doctor not found or invalid role");
-    }
+    if (!doctor || doctor.role !== "doctor") throw new Error("Doctor not found or invalid role");
 
-    // Validate required fields
-    if (!customerName || typeof customerName !== 'string' || !customerName.trim()) {
+    if (!customerName || typeof customerName !== "string" || !customerName.trim()) {
       throw new Error("Patient name is required");
     }
 
-    if (!details || typeof details !== 'string') {
-      throw new Error("Prescription details are required and must be a string");
+    if (!Array.isArray(medicines) || medicines.length === 0) {
+      throw new Error("At least one medicine must be selected");
     }
 
-    const trimmedDetails = details.trim();
-    if (trimmedDetails === "") {
-      throw new Error("Prescription details cannot be empty");
-    }
+    // Validate each medicine exists
+    const medicineIds = medicines.map(m => m.medicineId);
+    const foundMedicines = await Medicine.findAll({
+      where: { id: medicineIds },
+      attributes: ['id', 'name', 'price']
+    });
 
-    // Validate format early
-    try {
-      this.parseMedicinesFromDetails(trimmedDetails);
-    } catch (err) {
-      throw new Error(`Invalid prescription format: ${err.message}`);
-    }
+    const medicineMap = {};
+    foundMedicines.forEach(med => {
+      medicineMap[med.id] = med;
+    });
 
+    // Build human-readable string: "Paracetamol x2, Amoxicillin x1"
+    const detailsText = medicines
+      .map(item => {
+        const med = medicineMap[item.medicineId];
+        if (!med) throw new Error(`Medicine with ID ${item.medicineId} not found`);
+        if (!item.quantity || item.quantity <= 0) throw new Error("Quantity must be positive");
+        return `${med.name} x${item.quantity}`;
+      })
+      .join(", ");
+
+    // Save structured + readable
     return await prescriptionRepo.create({
       doctorId,
       customerName: customerName.trim(),
       customerPhone: customerPhone?.trim() || null,
-      details: trimmedDetails,
+      details: detailsText, // Human-readable
+      medicines,           // Structured JSON (optional)
       dosage: dosage?.trim() || "As directed",
       frequency: frequency?.trim() || "Once daily",
       duration: duration?.trim() || "7 days",
@@ -51,16 +69,8 @@ class PrescriptionService {
     const prescription = await prescriptionRepo.findById(prescriptionId);
     if (!prescription) throw new Error("Prescription not found");
 
-    console.log("📄 Fulfilling Prescription:", {
-      id: prescription.id,
-      status: prescription.status,
-      validUntil: prescription.validUntil,
-      details: prescription.details,
-      customerName: prescription.customerName
-    });
-
     if (prescription.status !== "pending") {
-      throw new Error("Prescription already processed");
+      throw new Error("Only pending prescriptions can be fulfilled");
     }
 
     if (prescription.validUntil && new Date() > new Date(prescription.validUntil)) {
@@ -68,6 +78,10 @@ class PrescriptionService {
     }
 
     const items = this.parseMedicinesFromDetails(prescription.details);
+
+    if (items.length === 0) {
+      throw new Error("No valid medicines found in prescription");
+    }
 
     const order = await orderService.createOrder({
       items,
@@ -84,42 +98,51 @@ class PrescriptionService {
   }
 
   parseMedicinesFromDetails(details) {
-    try {
-      if (!details || typeof details !== 'string') {
-        throw new Error("Prescription details must be a non-empty string");
-      }
-
-      const trimmed = details.trim();
-      if (trimmed === "") {
-        throw new Error("Prescription details are empty");
-      }
-
-      return trimmed.split(",").map(itemStr => {
-        const item = itemStr.trim();
-        if (!item) return null;
-
-        const parts = item.split(":").map(p => p.trim());
-        if (parts.length !== 2) {
-          throw new Error(`Invalid pair format: '${item}' — expected 'medicineId:quantity'`);
-        }
-
-        const [idStr, qtyStr] = parts;
-        const medicineId = parseInt(idStr, 10);
-        const quantity = parseInt(qtyStr, 10);
-
-        if (isNaN(medicineId) || medicineId <= 0) {
-          throw new Error(`Invalid medicine ID: '${idStr}'`);
-        }
-        if (isNaN(quantity) || quantity <= 0) {
-          throw new Error(`Invalid quantity: '${qtyStr}'`);
-        }
-
-        return { medicineId, quantity };
-      }).filter(Boolean);
-    } catch (error) {
-      console.error("❌ Prescription parsing failed:", error.message);
-      throw new Error(`Invalid prescription format: ${error.message}`);
+    // Case 1: Already an array [{ medicineId, quantity }]
+    if (Array.isArray(details)) {
+      return details.map(item => ({
+        medicineId: item.medicineId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice || 0
+      }));
     }
+
+    // Case 2: String like "Paracetamol x2, Amoxicillin x1"
+    if (typeof details === 'string') {
+      const regex = /([^,]+?)\s*x(\d+)/g;
+      const items = [];
+      let match;
+
+      while ((match = regex.exec(details)) !== null) {
+        const namePart = match[1].trim();
+        const quantity = parseInt(match[2]);
+
+        // Extract ID if embedded: "Paracetamol (ID:3)"
+        const idMatch = namePart.match(/\(ID:(\d+)\)/);
+        const medicineId = idMatch ? parseInt(idMatch[1]) : null;
+
+        if (medicineId && quantity > 0) {
+          items.push({ medicineId, quantity });
+        }
+      }
+
+      if (items.length > 0) return items;
+    }
+
+    // Case 3: Try parsing JSON string
+    try {
+      const parsed = JSON.parse(details);
+      if (Array.isArray(parsed)) {
+        return parsed.map(m => ({
+          medicineId: m.medicineId,
+          quantity: m.quantity
+        }));
+      }
+    } catch (e) {
+      console.warn("Failed to parse details as JSON:", e);
+    }
+
+    throw new Error("Prescription details are empty or invalid");
   }
 
   async getPendingPrescriptions() {
@@ -142,12 +165,9 @@ class PrescriptionService {
   }
 
   async searchPrescriptions({ customerName, customerPhone }) {
-    if (!customerName && !customerPhone) {
-      return [];
-    }
+    if (!customerName && !customerPhone) return [];
     return await prescriptionRepo.findByCustomerInfo(customerName, customerPhone);
   }
-
 }
 
 module.exports = new PrescriptionService();

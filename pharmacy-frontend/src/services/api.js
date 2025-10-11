@@ -35,8 +35,16 @@ export const getExpiringSoonAlerts = (days = 30) =>
   api.get(`/inventory/expiring-soon?days=${days}`);
 
 // ===== Orders =====
+// Interceptor to handle FormData
+api.interceptors.request.use(config => {
+  if (config.data instanceof FormData) {
+    config.headers['Content-Type'] = 'multipart/form-data';
+  }
+  return config;
+});
 export const createOrder = (orderData) => api.post("/orders", orderData);
-
+export const getAllOrders = () => api.get("/orders");
+export const getOrderById = (id) => api.get(`/orders/${id}`);
 // ===== Medicines =====
 export const searchMedicines = (params) => api.get("/medicine/search", { params });
 export const createMedicine = (medicineData) => api.post("/medicine", medicineData);

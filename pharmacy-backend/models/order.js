@@ -10,7 +10,8 @@ const Order = sequelize.define("Order", {
   },
   status: {
     type: DataTypes.ENUM("pending", "completed", "cancelled"),
-    defaultValue: "pending"
+    defaultValue: "pending",
+    allowNull: false
   },
   total: {
     type: DataTypes.DECIMAL(10, 2),
@@ -19,35 +20,42 @@ const Order = sequelize.define("Order", {
   cashierId: {
     type: DataTypes.INTEGER,
     references: {
-      model: "Users",
-      key: "id"
+      model: 'Users',
+      key: 'id'
     },
     allowNull: false,
-    comment: 'Staff who processed the order'
+    field: 'cashier_id' // Explicit mapping
   },
-  // 👤 Walk-in customer info (anonymous)
   customerName: {
     type: DataTypes.STRING(100),
     allowNull: true,
-    comment: 'Name of walk-in customer (not a User)'
+    field: 'customer_name'
   },
   customerPhone: {
     type: DataTypes.STRING(15),
     allowNull: true,
-    comment: 'Phone number of walk-in customer'
+    field: 'customer_phone'
   },
   prescriptionId: {
     type: DataTypes.INTEGER,
     references: {
-      model: "prescriptions", // ✅ lowercase — matches actual table name
-      key: "id"
+      model: 'prescriptions',
+      key: 'id'
     },
-    allowNull: true
+    allowNull: true,
+    field: 'prescription_id'
+  },
+  // ✅ Path to uploaded prescription image
+  prescriptionPhoto: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'prescription_photo', // Critical for underscored: true
+    comment: 'Path to uploaded prescription image'
   }
 }, {
   tableName: 'Orders',
   timestamps: true,
-  underscored: true,
+  underscored: true, // JS: camelCase → DB: snake_case
   comment: 'Sales orders; supports walk-in customers without accounts'
 });
 
