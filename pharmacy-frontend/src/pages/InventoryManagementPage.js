@@ -66,6 +66,9 @@ import {
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 
+// ✅ Add translation hook
+import { useTranslation } from 'react-i18next';
+
 export default function InventoryManagementPage() {
   const { user } = useAuth();
   const [medicines, setMedicines] = useState([]);
@@ -81,6 +84,9 @@ export default function InventoryManagementPage() {
   const [currentMedicine, setCurrentMedicine] = useState(null);
 
   const theme = useTheme();
+
+  // ✅ Initialize translation
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     batchNumber: "",
@@ -120,7 +126,7 @@ export default function InventoryManagementPage() {
           : [];
       } catch (err) {
         console.warn("Failed to load suppliers:", err.message);
-        toast.warning("Could not load supplier list.");
+        toast.warning(t('inventory.couldNotLoadSuppliers'));
       }
       setSuppliers(fetchedSuppliers);
 
@@ -142,7 +148,7 @@ export default function InventoryManagementPage() {
               medicineName: med.name,
               category: med.category,
               salePrice: med.price,
-              supplierName: supplier?.name || "Unknown Supplier",
+              supplierName: supplier?.name || t('inventory.unknownSupplier'),
               medicineId: med.id,
             });
           });
@@ -179,7 +185,7 @@ export default function InventoryManagementPage() {
 
     } catch (err) {
       console.error("Error fetching inventory:", err);
-      setError("Failed to load inventory data");
+      setError(t('inventory.failedToLoadData'));
     } finally {
       setLoading(false);
     }
@@ -240,25 +246,25 @@ export default function InventoryManagementPage() {
 
   const handleAddInventory = async () => {
     if (!formData.batchNumber.trim()) {
-      toast.error("Batch number is required");
+      toast.error(t('inventory.batchNumberRequired'));
       return;
     }
     if (!formData.quantity || formData.quantity < 1) {
-      toast.error("Quantity must be at least 1");
+      toast.error(t('inventory.quantityRequired'));
       return;
     }
     if (!formData.expiryDate) {
-      toast.error("Expiry date is required");
+      toast.error(t('inventory.expiryDateRequired'));
       return;
     }
 
     try {
       await addInventoryToMedicine(currentMedicine.id, formData);
-      toast.success(`🎉 Inventory added to ${currentMedicine.name}`);
+      toast.success(t('inventory.inventoryAddedSuccessfully', { name: currentMedicine.name }));
       setOpenAddModal(false);
       fetchInventoryData();
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to add inventory";
+      const msg = err.response?.data?.message || t('inventory.failedToAddInventory');
       toast.error(`❌ ${msg}`);
     }
   };
@@ -268,24 +274,24 @@ export default function InventoryManagementPage() {
   };
 
   const getStockStatus = (quantity) => {
-    if (quantity < 5) return { color: 'error', label: 'Critical' };
-    if (quantity < 10) return { color: 'warning', label: 'Low' };
-    if (quantity < 50) return { color: 'info', label: 'Medium' };
-    return { color: 'success', label: 'Good' };
+    if (quantity < 5) return { color: 'error', label: t('inventory.critical') };
+    if (quantity < 10) return { color: 'warning', label: t('inventory.low') };
+    if (quantity < 50) return { color: 'info', label: t('inventory.medium') };
+    return { color: 'success', label: t('inventory.good') };
   };
 
   const getExpiryStatus = (expiryDate) => {
     const expiry = new Date(expiryDate);
     expiry.setHours(0, 0, 0, 0);
     
-    if (expiry < now) return { color: 'error', label: 'Expired', icon: <Dangerous /> };
+    if (expiry < now) return { color: 'error', label: t('inventory.expired'), icon: <Dangerous /> };
     
     const daysUntilExpiry = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
-    if (daysUntilExpiry <= 7) return { color: 'error', label: '1 Week', icon: <Warning /> };
-    if (daysUntilExpiry <= 30) return { color: 'warning', label: '1 Month', icon: <Warning /> };
-    if (daysUntilExpiry <= 90) return { color: 'info', label: '3 Months', icon: <CalendarToday /> };
+    if (daysUntilExpiry <= 7) return { color: 'error', label: t('inventory.oneWeek'), icon: <Warning /> };
+    if (daysUntilExpiry <= 30) return { color: 'warning', label: t('inventory.oneMonth'), icon: <Warning /> };
+    if (daysUntilExpiry <= 90) return { color: 'info', label: t('inventory.threeMonths'), icon: <CalendarToday /> };
     
-    return { color: 'success', label: 'Safe', icon: <CheckCircle /> };
+    return { color: 'success', label: t('inventory.safe'), icon: <CheckCircle /> };
   };
 
   if (loading) {
@@ -302,7 +308,7 @@ export default function InventoryManagementPage() {
       >
         <CircularProgress size={60} />
         <Typography variant="h6" color="textSecondary">
-          Loading inventory data...
+          {t('inventory.loadingData')}
         </Typography>
       </Box>
     );
@@ -315,7 +321,7 @@ export default function InventoryManagementPage() {
           severity="error"
           action={
             <Button color="inherit" onClick={fetchInventoryData}>
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
@@ -342,10 +348,10 @@ export default function InventoryManagementPage() {
       >
         <Inventory sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
         <Typography variant="h3" fontWeight="bold" gutterBottom>
-          Inventory Management
+          {t('inventory.inventoryManagement')}
         </Typography>
         <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          Track and manage all medicine batches, stock levels, and expiry dates
+          {t('inventory.trackManageBatches')}
         </Typography>
       </Box>
 
@@ -361,7 +367,7 @@ export default function InventoryManagementPage() {
                 {stats.totalBatches}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Total Batches
+                {t('inventory.totalBatches')}
               </Typography>
             </CardContent>
           </Card>
@@ -377,7 +383,7 @@ export default function InventoryManagementPage() {
                 {stats.lowStock}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Low Stock
+                {t('inventory.lowStock')}
               </Typography>
             </CardContent>
           </Card>
@@ -393,7 +399,7 @@ export default function InventoryManagementPage() {
                 {stats.expiringSoon}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Expiring Soon
+                {t('inventory.expiringSoon')}
               </Typography>
             </CardContent>
           </Card>
@@ -409,7 +415,7 @@ export default function InventoryManagementPage() {
                 {stats.expired}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Expired
+                {t('inventory.expired')}
               </Typography>
             </CardContent>
           </Card>
@@ -425,7 +431,7 @@ export default function InventoryManagementPage() {
                 ${(stats.totalValue / 1000).toFixed(1)}K
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Total Value
+                {t('inventory.totalValue')}
               </Typography>
             </CardContent>
           </Card>
@@ -438,11 +444,11 @@ export default function InventoryManagementPage() {
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
-                label="Search Inventory"
+                label={t('inventory.searchInventory')}
                 fullWidth
                 value={searchTerm}
                 onChange={handleSearch}
-                placeholder="Search by medicine, batch, category, or supplier..."
+                placeholder={t('inventory.searchPlaceholder')}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -455,32 +461,32 @@ export default function InventoryManagementPage() {
             
             <Grid item xs={12} md={2}>
               <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
+                <InputLabel>{t('inventory.status')}</InputLabel>
                 <Select
                   value={statusFilter}
-                  label="Status"
+                  label={t('inventory.status')}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
-                  <MenuItem value="all">All Status</MenuItem>
-                  <MenuItem value="low_stock">Low Stock</MenuItem>
-                  <MenuItem value="expiring_soon">Expiring Soon</MenuItem>
-                  <MenuItem value="expired">Expired</MenuItem>
+                  <MenuItem value="all">{t('inventory.allStatus')}</MenuItem>
+                  <MenuItem value="low_stock">{t('inventory.lowStock')}</MenuItem>
+                  <MenuItem value="expiring_soon">{t('inventory.expiringSoon')}</MenuItem>
+                  <MenuItem value="expired">{t('inventory.expired')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             
             <Grid item xs={12} md={2}>
               <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
+                <InputLabel>{t('inventory.category')}</InputLabel>
                 <Select
                   value={categoryFilter}
-                  label="Category"
+                  label={t('inventory.category')}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                 >
-                  <MenuItem value="all">All Categories</MenuItem>
-                  <MenuItem value="prescription">Prescription</MenuItem>
-                  <MenuItem value="OTC">OTC</MenuItem>
-                  <MenuItem value="supplement">Supplement</MenuItem>
+                  <MenuItem value="all">{t('inventory.allCategories')}</MenuItem>
+                  <MenuItem value="prescription">{t('medicine.prescription')}</MenuItem>
+                  <MenuItem value="OTC">{t('medicine.otc')}</MenuItem>
+                  <MenuItem value="supplement">{t('medicine.supplement')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -494,7 +500,7 @@ export default function InventoryManagementPage() {
                   disabled={loading}
                   sx={{ flex: 1 }}
                 >
-                  Refresh
+                  {t('common.refresh')}
                 </Button>
               </Box>
             </Grid>
@@ -505,7 +511,7 @@ export default function InventoryManagementPage() {
       {/* Results Count */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" color="textSecondary">
-          Showing {filteredInventory.length} of {inventory.length} batches
+          {t('inventory.showingBatches', { count: filteredInventory.length, total: inventory.length })}
         </Typography>
         {(searchTerm || statusFilter !== 'all' || categoryFilter !== 'all') && (
           <Button
@@ -516,7 +522,7 @@ export default function InventoryManagementPage() {
               setCategoryFilter("all");
             }}
           >
-            Clear Filters
+            {t('inventory.clearFilters')}
           </Button>
         )}
       </Box>
@@ -533,15 +539,15 @@ export default function InventoryManagementPage() {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
-              <TableCell><strong>Medicine</strong></TableCell>
-              <TableCell><strong>Batch Number</strong></TableCell>
-              <TableCell><strong>Category</strong></TableCell>
-              <TableCell><strong>Stock Level</strong></TableCell>
-              <TableCell align="right"><strong>Purchase Price</strong></TableCell>
-              <TableCell align="right"><strong>Sale Price</strong></TableCell>
-              <TableCell><strong>Expiry Status</strong></TableCell>
-              <TableCell><strong>Supplier</strong></TableCell>
-              <TableCell align="center"><strong>Actions</strong></TableCell>
+              <TableCell><strong>{t('inventory.medicine')}</strong></TableCell>
+              <TableCell><strong>{t('inventory.batchNumber')}</strong></TableCell>
+              <TableCell><strong>{t('inventory.category')}</strong></TableCell>
+              <TableCell><strong>{t('inventory.stockLevel')}</strong></TableCell>
+              <TableCell align="right"><strong>{t('inventory.purchasePrice')}</strong></TableCell>
+              <TableCell align="right"><strong>{t('inventory.salePrice')}</strong></TableCell>
+              <TableCell><strong>{t('inventory.expiryStatus')}</strong></TableCell>
+              <TableCell><strong>{t('inventory.supplier')}</strong></TableCell>
+              <TableCell align="center"><strong>{t('inventory.actions')}</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -550,12 +556,12 @@ export default function InventoryManagementPage() {
                 <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                   <Inventory sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                   <Typography variant="h6" color="textSecondary" gutterBottom>
-                    No inventory batches found
+                    {t('inventory.noBatchesFound')}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
                     {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all' 
-                      ? 'Try adjusting your search or filters' 
-                      : 'No inventory batches available. Add some inventory to get started.'
+                      ? t('inventory.tryAdjustingSearch') 
+                      : t('inventory.noBatchesAvailable')
                     }
                   </Typography>
                 </TableCell>
@@ -580,7 +586,7 @@ export default function InventoryManagementPage() {
                           {item.medicineName}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">
-                          ID: #{item.medicineId}
+                          {t('inventory.idNumber', { id: item.medicineId })}
                         </Typography>
                       </Box>
                     </TableCell>
@@ -606,7 +612,7 @@ export default function InventoryManagementPage() {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Chip
-                          label={`${item.quantity} units`}
+                          label={t('inventory.units', { quantity: item.quantity })}
                           color={stockStatus.color}
                           size="small"
                           variant="filled"
@@ -627,7 +633,7 @@ export default function InventoryManagementPage() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Tooltip title={`Expires: ${new Date(item.expiryDate).toLocaleDateString()}`}>
+                      <Tooltip title={t('inventory.expiresOn', { date: new Date(item.expiryDate).toLocaleDateString() })}>
                         <Chip
                           icon={expiryStatus.icon}
                           label={expiryStatus.label}
@@ -647,7 +653,7 @@ export default function InventoryManagementPage() {
                     </TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: "flex", gap: 1, justifyContent: 'center' }}>
-                        <Tooltip title="Add More Stock">
+                        <Tooltip title={t('inventory.addMoreStock')}>
                           <IconButton
                             color="success"
                             size="small"
@@ -662,7 +668,7 @@ export default function InventoryManagementPage() {
                             <Add />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="View Details">
+                        <Tooltip title={t('inventory.viewDetails')}>
                           <IconButton
                             color="info"
                             size="small"
@@ -692,13 +698,14 @@ export default function InventoryManagementPage() {
         handleChange={handleChange}
         handleSubmit={handleAddInventory}
         handleClose={() => setOpenAddModal(false)}
+        t={t}
       />
     </Container>
   );
 }
 
 // Enhanced Modal Component
-function EnhancedAddInventoryModal({ open, medicine, formData, suppliers, handleChange, handleSubmit, handleClose }) {
+function EnhancedAddInventoryModal({ open, medicine, formData, suppliers, handleChange, handleSubmit, handleClose, t }) {
   const theme = useTheme();
 
   return (
@@ -719,20 +726,20 @@ function EnhancedAddInventoryModal({ open, medicine, formData, suppliers, handle
       }}>
         <Add color="success" />
         <Typography variant="h6" fontWeight="bold">
-          Add Inventory to {medicine?.name}
+          {t('inventory.addInventoryTo', { name: medicine?.name })}
         </Typography>
       </DialogTitle>
       
       <DialogContent sx={{ p: 3 }}>
         <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-          Medicine ID: #{medicine?.id}
+          {t('inventory.medicineId', { id: medicine?.id })}
         </Typography>
         
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <TextField
               name="batchNumber"
-              label="Batch Number"
+              label={t('inventory.batchNumber')}
               fullWidth
               value={formData.batchNumber}
               onChange={handleChange}
@@ -751,7 +758,7 @@ function EnhancedAddInventoryModal({ open, medicine, formData, suppliers, handle
           <Grid item xs={12} md={6}>
             <TextField
               name="quantity"
-              label="Quantity"
+              label={t('inventory.quantity')}
               type="number"
               fullWidth
               value={formData.quantity}
@@ -764,7 +771,7 @@ function EnhancedAddInventoryModal({ open, medicine, formData, suppliers, handle
           <Grid item xs={12} md={6}>
             <TextField
               name="expiryDate"
-              label="Expiry Date"
+              label={t('inventory.expiryDate')}
               type="date"
               fullWidth
               InputLabelProps={{ shrink: true }}
@@ -777,7 +784,7 @@ function EnhancedAddInventoryModal({ open, medicine, formData, suppliers, handle
           <Grid item xs={12} md={6}>
             <TextField
               name="purchasePrice"
-              label="Purchase Price"
+              label={t('inventory.purchasePrice')}
               type="number"
               fullWidth
               value={formData.purchasePrice}
@@ -795,11 +802,11 @@ function EnhancedAddInventoryModal({ open, medicine, formData, suppliers, handle
           
           <Grid item xs={12}>
             <FormControl fullWidth required>
-              <InputLabel>Supplier</InputLabel>
+              <InputLabel>{t('inventory.supplier')}</InputLabel>
               <Select
                 name="supplierId"
                 value={formData.supplierId}
-                label="Supplier"
+                label={t('inventory.supplier')}
                 onChange={handleChange}
                 startAdornment={
                   <InputAdornment position="start">
@@ -808,7 +815,7 @@ function EnhancedAddInventoryModal({ open, medicine, formData, suppliers, handle
                 }
               >
                 {suppliers.length === 0 ? (
-                  <MenuItem disabled>No suppliers available</MenuItem>
+                  <MenuItem disabled>{t('inventory.noSuppliersAvailable')}</MenuItem>
                 ) : (
                   suppliers.map((sup) => (
                     <MenuItem key={sup.id} value={sup.id}>
@@ -828,7 +835,7 @@ function EnhancedAddInventoryModal({ open, medicine, formData, suppliers, handle
           variant="outlined"
           startIcon={<ArrowBack />}
         >
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button 
           onClick={handleSubmit} 
@@ -837,7 +844,7 @@ function EnhancedAddInventoryModal({ open, medicine, formData, suppliers, handle
           startIcon={<CheckCircle />}
           sx={{ px: 4 }}
         >
-          Add Inventory
+          {t('inventory.addInventory')}
         </Button>
       </DialogActions>
     </Dialog>

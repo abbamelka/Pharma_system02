@@ -26,6 +26,7 @@ export const verifyToken = (token) =>
   token ? Promise.resolve() : Promise.reject(new Error("No token"));
 export const resetUserPassword = (userId, newPassword) =>
   api.post("/users/reset-password", { userId, newPassword });
+
 // ===== Reports =====
 export const getDailySales = () => api.get("/reports/daily-sales");
 export const getTopMedicines = (limit = 10) => api.get(`/reports/top-medicines?limit=${limit}`);
@@ -45,6 +46,7 @@ api.interceptors.request.use(config => {
 export const createOrder = (orderData) => api.post("/orders", orderData);
 export const getAllOrders = () => api.get("/orders");
 export const getOrderById = (id) => api.get(`/orders/${id}`);
+
 // ===== Medicines =====
 export const searchMedicines = (params) => api.get("/medicine/search", { params });
 export const createMedicine = (medicineData) => api.post("/medicine", medicineData);
@@ -100,6 +102,17 @@ export const getSupplierById = (id) => api.get(`/suppliers/${id}`);
 export const updateSupplier = (id, supplierData) => api.put(`/suppliers/${id}`, supplierData);
 export const deleteSupplier = (id) => api.delete(`/suppliers/${id}`);
 
+// ===== Audit Logs =====
+export const getAuditLogs = () => api.get("/audit/logs");
+
+// ===== AI Assistant =====
+/**
+ * Send a message to the AI assistant and get a response about medicines
+ * @param {string} query - The user's question about a medicine
+ * @returns {Promise}
+ */
+export const aiChat = (query) => api.post("/ai/medicine-chat", { query });
+
 // Grouped exports for scalability
 export const reportsApi = { getDailySales, getTopMedicines, getLowStockAlerts, getExpiringSoonAlerts };
 export const ordersApi = { create: createOrder };
@@ -107,6 +120,5 @@ export const medicinesApi = { search: searchMedicines };
 export const receiptsApi = { generate: generateReceipt, download: downloadReceipt };
 export const prescriptionsApi = { getPending: getPendingPrescriptions, fulfill: fulfillPrescription, cancel: cancelPrescription, create: createPrescription, search: getCustomerPrescriptions };
 export const inventoryApi = { lowStock: getLowStockAlerts, expiringSoon: getExpiringSoonAlerts };
-// ===== Audit Logs =====
-export const getAuditLogs = () => api.get("/audit/logs");
+
 export default api;

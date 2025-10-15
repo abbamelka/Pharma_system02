@@ -49,6 +49,9 @@ import {
 } from "../services/api";
 import { toast } from "react-toastify";
 
+// ✅ Add translation hook
+import { useTranslation } from 'react-i18next';
+
 export default function PrescriptionFulfillmentPage() {
   const theme = useTheme();
   const [prescriptions, setPrescriptions] = useState([]);
@@ -56,6 +59,9 @@ export default function PrescriptionFulfillmentPage() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
+
+  // ✅ Initialize translation
+  const { t } = useTranslation();
 
   const fetchPrescriptions = async () => {
     setLoading(true);
@@ -68,7 +74,7 @@ export default function PrescriptionFulfillmentPage() {
       const data = response.data?.prescriptions;
 
       if (!Array.isArray(data)) {
-        throw new Error("Invalid response format");
+        throw new Error(t('prescription.invalidResponseFormat'));
       }
 
       // ✅ Ensure details are always a string like "Paracetamol x2"
@@ -79,8 +85,8 @@ export default function PrescriptionFulfillmentPage() {
         if (Array.isArray(detailsText)) {
           detailsText = detailsText
             .map(item => {
-              const name = item.medicineName || `Medicine #${item.medicineId}`;
-              return `${name} x${item.quantity}`;
+              const name = item.medicineName || t('prescription.medicineId', { id: item.medicineId });
+              return t('prescription.medicineQuantity', { name, quantity: item.quantity });
             })
             .join(", ");
         }
@@ -94,7 +100,7 @@ export default function PrescriptionFulfillmentPage() {
       setPrescriptions(enriched);
     } catch (err) {
       console.error("Error fetching prescriptions:", err);
-      const message = err.response?.data?.message || "Failed to load prescriptions";
+      const message = err.response?.data?.message || t('prescription.failedToLoadPrescriptions');
       setError(message);
       setPrescriptions([]);
     } finally {
@@ -109,25 +115,25 @@ export default function PrescriptionFulfillmentPage() {
   const handleFulfill = async (id) => {
     try {
       await fulfillPrescription(id);
-      toast.success("🎉 Prescription fulfilled and order created!");
+      toast.success(t('prescription.fulfilledSuccess'));
       fetchPrescriptions();
     } catch (err) {
       console.error("Error fulfilling prescription:", err);
-      const message = err.response?.data?.message || "Failed to fulfill prescription";
+      const message = err.response?.data?.message || t('prescription.failedToFulfill');
       toast.error(`❌ ${message}`);
     }
   };
 
   const handleCancel = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this prescription?")) return;
+    if (!window.confirm(t('prescription.confirmCancel'))) return;
 
     try {
       await cancelPrescription(id);
-      toast.success("🗑️ Prescription cancelled");
+      toast.success(t('prescription.cancelledSuccess'));
       fetchPrescriptions();
     } catch (err) {
       console.error("Error cancelling prescription:", err);
-      const message = err.response?.data?.message || "Failed to cancel prescription";
+      const message = err.response?.data?.message || t('prescription.failedToCancel');
       toast.error(`❌ ${message}`);
     }
   };
@@ -185,7 +191,7 @@ export default function PrescriptionFulfillmentPage() {
       >
         <CircularProgress size={60} />
         <Typography variant="h6" color="textSecondary">
-          Loading prescriptions...
+          {t('prescription.loadingPrescriptions')}
         </Typography>
       </Box>
     );
@@ -198,7 +204,7 @@ export default function PrescriptionFulfillmentPage() {
           severity="error"
           action={
             <Button color="inherit" onClick={fetchPrescriptions}>
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
@@ -225,10 +231,10 @@ export default function PrescriptionFulfillmentPage() {
       >
         <LocalPharmacy sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
         <Typography variant="h3" fontWeight="bold" gutterBottom>
-          Prescription Fulfillment
+          {t('prescription.prescriptionFulfillment')}
         </Typography>
         <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          Review and fulfill pending prescriptions with care
+          {t('prescription.reviewAndFulfill')}
         </Typography>
       </Box>
 
@@ -244,7 +250,7 @@ export default function PrescriptionFulfillmentPage() {
                 {stats.total}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Total Prescriptions
+                {t('prescription.totalPrescriptions')}
               </Typography>
             </CardContent>
           </Card>
@@ -260,7 +266,7 @@ export default function PrescriptionFulfillmentPage() {
                 {stats.pending}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Pending Review
+                {t('prescription.pendingReview')}
               </Typography>
             </CardContent>
           </Card>
@@ -276,7 +282,7 @@ export default function PrescriptionFulfillmentPage() {
                 {stats.fulfilled}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Fulfilled
+                {t('prescription.fulfilled')}
               </Typography>
             </CardContent>
           </Card>
@@ -292,7 +298,7 @@ export default function PrescriptionFulfillmentPage() {
                 {stats.cancelled}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Cancelled
+                {t('prescription.cancelled')}
               </Typography>
             </CardContent>
           </Card>
@@ -305,11 +311,11 @@ export default function PrescriptionFulfillmentPage() {
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={6}>
               <TextField
-                label="Search Prescriptions"
+                label={t('prescription.searchPrescriptions')}
                 fullWidth
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by patient, doctor, or details..."
+                placeholder={t('prescription.searchPlaceholder')}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -329,7 +335,7 @@ export default function PrescriptionFulfillmentPage() {
                   disabled={loading}
                   sx={{ flex: 1 }}
                 >
-                  Refresh
+                  {t('common.refresh')}
                 </Button>
               </Box>
             </Grid>
@@ -340,14 +346,14 @@ export default function PrescriptionFulfillmentPage() {
       {/* Results Count */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" color="textSecondary">
-          Showing {filteredPrescriptions.length} of {prescriptions.length} prescriptions
+          {t('prescription.showingPrescriptions', { count: filteredPrescriptions.length, total: prescriptions.length })}
         </Typography>
         {searchTerm && (
           <Button
             color="secondary"
             onClick={() => setSearchTerm("")}
           >
-            Clear Search
+            {t('prescription.clearSearch')}
           </Button>
         )}
       </Box>
@@ -364,11 +370,11 @@ export default function PrescriptionFulfillmentPage() {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
-              <TableCell><strong>Prescription Details</strong></TableCell>
-              <TableCell><strong>Patient Information</strong></TableCell>
-              <TableCell><strong>Medical Details</strong></TableCell>
-              <TableCell><strong>Status</strong></TableCell>
-              <TableCell align="center"><strong>Actions</strong></TableCell>
+              <TableCell><strong>{t('prescription.prescriptionDetails')}</strong></TableCell>
+              <TableCell><strong>{t('prescription.patientInformation')}</strong></TableCell>
+              <TableCell><strong>{t('prescription.medicalDetails')}</strong></TableCell>
+              <TableCell><strong>{t('prescription.status')}</strong></TableCell>
+              <TableCell align="center"><strong>{t('prescription.actions')}</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -377,12 +383,12 @@ export default function PrescriptionFulfillmentPage() {
                 <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                   <LocalPharmacy sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                   <Typography variant="h6" color="textSecondary" gutterBottom>
-                    No prescriptions found
+                    {t('prescription.noPrescriptionsFound')}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
                     {searchTerm
-                      ? 'Try adjusting your search terms'
-                      : 'All prescriptions have been fulfilled or there are no pending prescriptions.'
+                      ? t('prescription.tryAdjustingSearch')
+                      : t('prescription.allFulfilledOrNoPending')
                     }
                   </Typography>
                 </TableCell>
@@ -400,12 +406,12 @@ export default function PrescriptionFulfillmentPage() {
                   <TableCell>
                     <Box>
                       <Typography fontWeight="bold" gutterBottom>
-                        Prescription #{prescription.id}
+                        {t('prescription.prescriptionId', { id: prescription.id })}
                       </Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                         <MedicalServices sx={{ fontSize: 14, color: 'text.secondary' }} />
                         <Typography variant="body2" color="textSecondary">
-                          Dr. {prescription.doctor?.username || "Unknown Doctor"}
+                          {t('prescription.doctorName', { doctor: prescription.doctor?.username || t('prescription.unknownDoctor') })}
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -427,7 +433,7 @@ export default function PrescriptionFulfillmentPage() {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                         <Person sx={{ fontSize: 16, color: 'text.secondary' }} />
                         <Typography fontWeight="medium">
-                          {prescription.customerName || "Walk-in Patient"}
+                          {prescription.customerName || t('prescription.walkInPatient')}
                         </Typography>
                       </Box>
                       {prescription.customerPhone && (
@@ -452,7 +458,7 @@ export default function PrescriptionFulfillmentPage() {
                           overflow: 'hidden'
                         }}
                       >
-                        {prescription.details || "No medication details"}
+                        {prescription.details || t('prescription.noMedicationDetails')}
                       </Typography>
                     </Tooltip>
                   </TableCell>
@@ -469,7 +475,7 @@ export default function PrescriptionFulfillmentPage() {
                     <Box sx={{ display: "flex", gap: 1, justifyContent: 'center' }}>
                       {prescription.status === 'pending' && (
                         <>
-                          <Tooltip title="Fulfill Prescription">
+                          <Tooltip title={t('prescription.fulfillPrescription')}>
                             <Button
                               size="small"
                               variant="contained"
@@ -482,10 +488,10 @@ export default function PrescriptionFulfillmentPage() {
                                 '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.9) }
                               }}
                             >
-                              Fulfill
+                              {t('prescription.fulfill')}
                             </Button>
                           </Tooltip>
-                          <Tooltip title="Cancel Prescription">
+                          <Tooltip title={t('prescription.cancelPrescription')}>
                             <Button
                               size="small"
                               variant="outlined"
@@ -494,13 +500,13 @@ export default function PrescriptionFulfillmentPage() {
                               onClick={() => handleCancel(prescription.id)}
                               sx={{ borderRadius: 2 }}
                             >
-                              Cancel
+                              {t('prescription.cancel')}
                             </Button>
                           </Tooltip>
                         </>
                       )}
                       {prescription.status !== 'pending' && (
-                        <Tooltip title="View Details">
+                        <Tooltip title={t('prescription.viewDetails')}>
                           <IconButton
                             color="info"
                             size="small"

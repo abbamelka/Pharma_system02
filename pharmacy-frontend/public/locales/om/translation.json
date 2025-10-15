@@ -1,0 +1,17 @@
+{
+  "common": {
+    "language": "Afaan",
+    "english": "Englizii",
+    "amharic": "Afaan Amaara",
+    "oromo": "Afaan Oromoo"
+  },
+  "layout": {
+    "prescriptionManagement": "Gootummaa Ibsaarree Qulqulluu",
+    "fulfillment": "Xumurama",
+    "pending": "Xumura tokko irra jira",
+    "searchByPhone": "Barbaadi karaa lakkoofsa bilbilaa",
+    "status": "Haala",
+    "actions": "Gibxata",
+    "createNew": "Ibsaarree Haaraa Uumi"
+  }
+}

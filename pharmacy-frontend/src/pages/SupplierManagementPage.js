@@ -63,6 +63,9 @@ import {
 } from "../services/api";
 import { toast } from "react-toastify";
 
+// ✅ Add translation hook
+import { useTranslation } from 'react-i18next';
+
 export default function SupplierManagementPage() {
   const theme = useTheme();
   const [suppliers, setSuppliers] = useState([]);
@@ -73,6 +76,9 @@ export default function SupplierManagementPage() {
   const [currentSupplier, setCurrentSupplier] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // ✅ Initialize translation
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -111,8 +117,8 @@ export default function SupplierManagementPage() {
 
     } catch (err) {
       console.error("Error fetching suppliers:", err);
-      setError("Failed to load suppliers");
-      toast.error("❌ Failed to load suppliers");
+      setError(t('supplier.failedToLoadSuppliers'));
+      toast.error(`❌ ${t('supplier.failedToLoadSuppliers')}`);
     } finally {
       setLoading(false);
     }
@@ -124,52 +130,52 @@ export default function SupplierManagementPage() {
 
   const handleCreateSupplier = async () => {
     if (!formData.name.trim()) {
-      toast.error("Supplier name is required");
+      toast.error(t('supplier.nameRequired'));
       return;
     }
 
     try {
       await createSupplier(formData);
-      toast.success("🎉 Supplier created successfully!");
+      toast.success(t('supplier.createdSuccessfully'));
       fetchSuppliers();
       setOpenAddModal(false);
       resetForm();
     } catch (err) {
       console.error("Error creating supplier:", err);
-      const msg = err.response?.data?.message || "Failed to create supplier";
+      const msg = err.response?.data?.message || t('supplier.failedToCreateSupplier');
       toast.error(`❌ ${msg}`);
     }
   };
 
   const handleUpdateSupplier = async () => {
     if (!formData.name.trim()) {
-      toast.error("Supplier name is required");
+      toast.error(t('supplier.nameRequired'));
       return;
     }
 
     try {
       await updateSupplier(currentSupplier.id, formData);
-      toast.success("✅ Supplier updated successfully!");
+      toast.success(t('supplier.updatedSuccessfully'));
       fetchSuppliers();
       setOpenEditModal(false);
       resetForm();
     } catch (err) {
       console.error("Error updating supplier:", err);
-      const msg = err.response?.data?.message || "Failed to update supplier";
+      const msg = err.response?.data?.message || t('supplier.failedToUpdateSupplier');
       toast.error(`❌ ${msg}`);
     }
   };
 
   const handleDeleteSupplier = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this supplier?")) return;
+    if (!window.confirm(t('supplier.confirmDelete'))) return;
 
     try {
       await deleteSupplier(id);
-      toast.success("🗑️ Supplier deleted successfully!");
+      toast.success(t('supplier.deletedSuccessfully'));
       fetchSuppliers();
     } catch (err) {
       console.error("Error deleting supplier:", err);
-      const msg = err.response?.data?.message || "Failed to delete supplier";
+      const msg = err.response?.data?.message || t('supplier.failedToDeleteSupplier');
       toast.error(`❌ ${msg}`);
     }
   };
@@ -189,7 +195,7 @@ export default function SupplierManagementPage() {
       setOpenEditModal(true);
     } catch (err) {
       console.error("Error fetching supplier:", err);
-      toast.error("❌ Failed to load supplier details");
+      toast.error(`❌ ${t('supplier.failedToLoadDetails')}`);
     }
   };
 
@@ -204,8 +210,8 @@ export default function SupplierManagementPage() {
       setSuppliers(response.data.suppliers || []);
     } catch (err) {
       console.error("Error searching suppliers:", err);
-      setError("Failed to search suppliers");
-      toast.error("❌ Failed to search suppliers");
+      setError(t('supplier.failedToSearchSuppliers'));
+      toast.error(`❌ ${t('supplier.failedToSearchSuppliers')}`);
     }
   };
 
@@ -235,9 +241,9 @@ export default function SupplierManagementPage() {
       supplier.contact
     ].filter(Boolean).length;
 
-    if (completeness >= 3) return { color: 'success', label: 'Complete' };
-    if (completeness >= 2) return { color: 'warning', label: 'Partial' };
-    return { color: 'error', label: 'Incomplete' };
+    if (completeness >= 3) return { color: 'success', label: t('supplier.complete') };
+    if (completeness >= 2) return { color: 'warning', label: t('supplier.partial') };
+    return { color: 'error', label: t('supplier.incomplete') };
   };
 
   if (loading) {
@@ -254,7 +260,7 @@ export default function SupplierManagementPage() {
       >
         <CircularProgress size={60} />
         <Typography variant="h6" color="textSecondary">
-          Loading supplier data...
+          {t('supplier.loadingData')}
         </Typography>
       </Box>
     );
@@ -267,7 +273,7 @@ export default function SupplierManagementPage() {
           severity="error"
           action={
             <Button color="inherit" onClick={fetchSuppliers}>
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
@@ -294,10 +300,10 @@ export default function SupplierManagementPage() {
       >
         <LocalShipping sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
         <Typography variant="h3" fontWeight="bold" gutterBottom>
-          Supplier Management
+          {t('supplier.supplierManagement')}
         </Typography>
         <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          Manage your supplier network and contact information
+          {t('supplier.manageSupplierNetwork')}
         </Typography>
       </Box>
 
@@ -313,7 +319,7 @@ export default function SupplierManagementPage() {
                 {stats.totalSuppliers}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Total Suppliers
+                {t('supplier.totalSuppliers')}
               </Typography>
             </CardContent>
           </Card>
@@ -329,7 +335,7 @@ export default function SupplierManagementPage() {
                 {stats.activeSuppliers}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Active Suppliers
+                {t('supplier.activeSuppliers')}
               </Typography>
             </CardContent>
           </Card>
@@ -345,7 +351,7 @@ export default function SupplierManagementPage() {
                 {stats.hasContact}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                With Contact Person
+                {t('supplier.withContactPerson')}
               </Typography>
             </CardContent>
           </Card>
@@ -361,7 +367,7 @@ export default function SupplierManagementPage() {
                 {stats.hasAddress}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                With Address
+                {t('supplier.withAddress')}
               </Typography>
             </CardContent>
           </Card>
@@ -374,12 +380,12 @@ export default function SupplierManagementPage() {
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={6}>
               <TextField
-                label="Search Suppliers"
+                label={t('supplier.searchSuppliers')}
                 fullWidth
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                placeholder="Search by supplier name, email, or contact..."
+                placeholder={t('supplier.searchPlaceholder')}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -392,16 +398,16 @@ export default function SupplierManagementPage() {
             
             <Grid item xs={12} md={3}>
               <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
+                <InputLabel>{t('supplier.status')}</InputLabel>
                 <Select
                   value={statusFilter}
-                  label="Status"
+                  label={t('supplier.status')}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
-                  <MenuItem value="all">All Suppliers</MenuItem>
-                  <MenuItem value="complete">Complete Info</MenuItem>
-                  <MenuItem value="partial">Partial Info</MenuItem>
-                  <MenuItem value="incomplete">Incomplete Info</MenuItem>
+                  <MenuItem value="all">{t('supplier.allSuppliers')}</MenuItem>
+                  <MenuItem value="complete">{t('supplier.completeInfo')}</MenuItem>
+                  <MenuItem value="partial">{t('supplier.partialInfo')}</MenuItem>
+                  <MenuItem value="incomplete">{t('supplier.incompleteInfo')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -414,7 +420,7 @@ export default function SupplierManagementPage() {
                   onClick={handleSearch}
                   sx={{ flex: 1 }}
                 >
-                  Search
+                  {t('common.search')}
                 </Button>
                 <Button
                   variant="outlined"
@@ -422,7 +428,7 @@ export default function SupplierManagementPage() {
                   onClick={fetchSuppliers}
                   disabled={loading}
                 >
-                  Refresh
+                  {t('common.refresh')}
                 </Button>
               </Box>
             </Grid>
@@ -442,14 +448,14 @@ export default function SupplierManagementPage() {
             py: 1.5
           }}
         >
-          Create New Supplier
+          {t('supplier.createNewSupplier')}
         </Button>
       </Box>
 
       {/* Results Count */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" color="textSecondary">
-          Showing {suppliers.length} suppliers
+          {t('supplier.showingSuppliers', { count: suppliers.length })}
         </Typography>
         {searchTerm && (
           <Button
@@ -459,7 +465,7 @@ export default function SupplierManagementPage() {
               fetchSuppliers();
             }}
           >
-            Clear Search
+            {t('supplier.clearSearch')}
           </Button>
         )}
       </Box>
@@ -476,11 +482,11 @@ export default function SupplierManagementPage() {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
-              <TableCell><strong>Supplier Details</strong></TableCell>
-              <TableCell><strong>Contact Information</strong></TableCell>
-              <TableCell><strong>Contact Person</strong></TableCell>
-              <TableCell><strong>Status</strong></TableCell>
-              <TableCell align="center"><strong>Actions</strong></TableCell>
+              <TableCell><strong>{t('supplier.supplierDetails')}</strong></TableCell>
+              <TableCell><strong>{t('supplier.contactInformation')}</strong></TableCell>
+              <TableCell><strong>{t('supplier.contactPerson')}</strong></TableCell>
+              <TableCell><strong>{t('supplier.status')}</strong></TableCell>
+              <TableCell align="center"><strong>{t('supplier.actions')}</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -489,12 +495,12 @@ export default function SupplierManagementPage() {
                 <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                   <Business sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                   <Typography variant="h6" color="textSecondary" gutterBottom>
-                    No suppliers found
+                    {t('supplier.noSuppliersFound')}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
                     {searchTerm 
-                      ? 'Try adjusting your search terms' 
-                      : 'Create your first supplier to get started'
+                      ? t('supplier.tryAdjustingSearch') 
+                      : t('supplier.createFirstSupplier')
                     }
                   </Typography>
                 </TableCell>
@@ -518,7 +524,7 @@ export default function SupplierManagementPage() {
                           {supplier.name}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">
-                          ID: #{supplier.id}
+                          {t('supplier.idNumber', { id: supplier.id })}
                         </Typography>
                         {supplier.address && (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
@@ -550,7 +556,7 @@ export default function SupplierManagementPage() {
                         )}
                         {!supplier.email && !supplier.phone && (
                           <Typography variant="body2" color="textSecondary" fontStyle="italic">
-                            No contact info
+                            {t('supplier.noContactInfo')}
                           </Typography>
                         )}
                       </Box>
@@ -565,7 +571,7 @@ export default function SupplierManagementPage() {
                         </Box>
                       ) : (
                         <Typography variant="body2" color="textSecondary" fontStyle="italic">
-                          Not specified
+                          {t('supplier.notSpecified')}
                         </Typography>
                       )}
                     </TableCell>
@@ -579,7 +585,7 @@ export default function SupplierManagementPage() {
                     </TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: "flex", gap: 1, justifyContent: 'center' }}>
-                        <Tooltip title="Edit Supplier">
+                        <Tooltip title={t('supplier.editSupplier')}>
                           <IconButton
                             color="primary"
                             size="small"
@@ -591,7 +597,7 @@ export default function SupplierManagementPage() {
                             <Edit />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Delete Supplier">
+                        <Tooltip title={t('supplier.deleteSupplier')}>
                           <IconButton
                             color="error"
                             size="small"
@@ -616,24 +622,26 @@ export default function SupplierManagementPage() {
       {/* Enhanced Modals */}
       <EnhancedSupplierModal
         open={openAddModal}
-        title="Create New Supplier"
+        title={t('supplier.createNewSupplier')}
         formData={formData}
         handleInputChange={handleInputChange}
         handleSubmit={handleCreateSupplier}
         handleClose={() => setOpenAddModal(false)}
-        submitText="Create Supplier"
+        submitText={t('supplier.createSupplier')}
         submitIcon={<CheckCircle />}
+        t={t}
       />
 
       <EnhancedSupplierModal
         open={openEditModal}
-        title="Edit Supplier"
+        title={t('supplier.editSupplier')}
         formData={formData}
         handleInputChange={handleInputChange}
         handleSubmit={handleUpdateSupplier}
         handleClose={() => setOpenEditModal(false)}
-        submitText="Update Supplier"
+        submitText={t('supplier.updateSupplier')}
         submitIcon={<CheckCircle />}
+        t={t}
       />
     </Container>
   );
@@ -648,7 +656,8 @@ function EnhancedSupplierModal({
   handleSubmit, 
   handleClose, 
   submitText,
-  submitIcon 
+  submitIcon,
+  t 
 }) {
   const theme = useTheme();
 
@@ -679,7 +688,7 @@ function EnhancedSupplierModal({
           <Grid item xs={12}>
             <TextField
               name="name"
-              label="Supplier Name"
+              label={t('supplier.supplierName')}
               fullWidth
               value={formData.name}
               onChange={handleInputChange}
@@ -698,7 +707,7 @@ function EnhancedSupplierModal({
           <Grid item xs={12} md={6}>
             <TextField
               name="email"
-              label="Email Address"
+              label={t('supplier.emailAddress')}
               type="email"
               fullWidth
               value={formData.email}
@@ -716,7 +725,7 @@ function EnhancedSupplierModal({
           <Grid item xs={12} md={6}>
             <TextField
               name="phone"
-              label="Phone Number"
+              label={t('supplier.phoneNumber')}
               type="tel"
               fullWidth
               value={formData.phone}
@@ -734,7 +743,7 @@ function EnhancedSupplierModal({
           <Grid item xs={12}>
             <TextField
               name="contact"
-              label="Contact Person"
+              label={t('supplier.contactPerson')}
               fullWidth
               value={formData.contact}
               onChange={handleInputChange}
@@ -751,7 +760,7 @@ function EnhancedSupplierModal({
           <Grid item xs={12}>
             <TextField
               name="address"
-              label="Address"
+              label={t('supplier.address')}
               fullWidth
               multiline
               rows={3}
@@ -775,7 +784,7 @@ function EnhancedSupplierModal({
           variant="outlined"
           startIcon={<ArrowBack />}
         >
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button 
           onClick={handleSubmit} 

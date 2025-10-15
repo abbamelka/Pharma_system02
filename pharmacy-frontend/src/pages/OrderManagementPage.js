@@ -55,6 +55,9 @@ import {
 import { getAllOrders } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
+// ✅ Add translation hook
+import { useTranslation } from 'react-i18next';
+
 // ✅ Define API base dynamically
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
@@ -74,6 +77,9 @@ export default function OrderManagementPage() {
   const { user } = useAuth(); // Get current user role
   const theme = useTheme();
 
+  // ✅ Initialize translation
+  const { t } = useTranslation();
+
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -90,7 +96,7 @@ export default function OrderManagementPage() {
       setError("");
     } catch (err) {
       console.error("Failed to load orders:", err);
-      setError("Could not load orders. Please try again.");
+      setError(t('order.couldNotLoadOrders'));
     } finally {
       setLoading(false);
     }
@@ -247,10 +253,10 @@ export default function OrderManagementPage() {
       >
         <Receipt sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
         <Typography variant="h3" fontWeight="bold" gutterBottom>
-          Order Management
+          {t('order.orderManagement')}
         </Typography>
         <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          Manage and track all pharmacy orders
+          {t('order.manageTrackOrders')}
         </Typography>
       </Box>
 
@@ -266,7 +272,7 @@ export default function OrderManagementPage() {
                 {totalOrders}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Total Orders
+                {t('order.totalOrders')}
               </Typography>
             </CardContent>
           </Card>
@@ -282,7 +288,7 @@ export default function OrderManagementPage() {
                 {completedOrders}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Completed Orders
+                {t('order.completedOrders')}
               </Typography>
             </CardContent>
           </Card>
@@ -298,7 +304,7 @@ export default function OrderManagementPage() {
                 ${totalRevenue.toFixed(2)}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Total Revenue
+                {t('order.totalRevenue')}
               </Typography>
             </CardContent>
           </Card>
@@ -311,11 +317,11 @@ export default function OrderManagementPage() {
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
-                label="Search Orders"
+                label={t('order.searchOrders')}
                 fullWidth
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by ID, Customer, or Cashier..."
+                placeholder={t('order.searchPlaceholder')}
                 InputProps={{
                   startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
                 }}
@@ -324,34 +330,34 @@ export default function OrderManagementPage() {
             
             <Grid item xs={12} md={3}>
               <FormControl fullWidth>
-                <InputLabel>Status Filter</InputLabel>
+                <InputLabel>{t('order.statusFilter')}</InputLabel>
                 <Select
                   value={statusFilter}
-                  label="Status Filter"
+                  label={t('order.statusFilter')}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   startAdornment={<FilterList sx={{ mr: 1, color: 'text.secondary' }} />}
                 >
-                  <MenuItem value="all">All Status</MenuItem>
-                  <MenuItem value="completed">Completed</MenuItem>
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="processing">Processing</MenuItem>
-                  <MenuItem value="cancelled">Cancelled</MenuItem>
+                  <MenuItem value="all">{t('order.allStatus')}</MenuItem>
+                  <MenuItem value="completed">{t('order.completed')}</MenuItem>
+                  <MenuItem value="pending">{t('order.pending')}</MenuItem>
+                  <MenuItem value="processing">{t('order.processing')}</MenuItem>
+                  <MenuItem value="cancelled">{t('order.cancelled')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             
             <Grid item xs={12} md={3}>
               <FormControl fullWidth>
-                <InputLabel>Date Filter</InputLabel>
+                <InputLabel>{t('order.dateFilter')}</InputLabel>
                 <Select
                   value={dateFilter}
-                  label="Date Filter"
+                  label={t('order.dateFilter')}
                   onChange={(e) => setDateFilter(e.target.value)}
                 >
-                  <MenuItem value="all">All Time</MenuItem>
-                  <MenuItem value="today">Today</MenuItem>
-                  <MenuItem value="week">Last 7 Days</MenuItem>
-                  <MenuItem value="month">Last 30 Days</MenuItem>
+                  <MenuItem value="all">{t('order.allTime')}</MenuItem>
+                  <MenuItem value="today">{t('order.today')}</MenuItem>
+                  <MenuItem value="week">{t('order.last7Days')}</MenuItem>
+                  <MenuItem value="month">{t('order.last30Days')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -365,7 +371,7 @@ export default function OrderManagementPage() {
                 fullWidth
                 sx={{ height: '56px' }}
               >
-                Refresh
+                {t('order.refresh')}
               </Button>
             </Grid>
           </Grid>
@@ -389,11 +395,11 @@ export default function OrderManagementPage() {
       {/* Results Count */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" color="textSecondary">
-          Showing {filteredOrders.length} of {orders.length} orders
+          {t('order.showingOrders', { count: filteredOrders.length, total: orders.length })}
         </Typography>
         {searchTerm && (
           <Chip 
-            label={`Search: "${searchTerm}"`} 
+            label={t('order.searchFor', { term: searchTerm })}
             onDelete={() => setSearchTerm("")}
             color="primary"
             variant="outlined"
@@ -405,7 +411,7 @@ export default function OrderManagementPage() {
         <Box display="flex" justifyContent="center" alignItems="center" my={8} flexDirection="column" gap={2}>
           <CircularProgress size={60} />
           <Typography variant="h6" color="textSecondary">
-            Loading orders...
+            {t('order.loadingOrders')}
           </Typography>
         </Box>
       ) : (
@@ -420,14 +426,14 @@ export default function OrderManagementPage() {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
-                <TableCell><strong>Order ID</strong></TableCell>
-                <TableCell><strong>Customer</strong></TableCell>
-                <TableCell><strong>Cashier</strong></TableCell>
-                <TableCell align="right"><strong>Total</strong></TableCell>
-                <TableCell><strong>Status</strong></TableCell>
-                <TableCell><strong>Date & Time</strong></TableCell>
-                <TableCell><strong>Prescription</strong></TableCell>
-                <TableCell align="center"><strong>Actions</strong></TableCell>
+                <TableCell><strong>{t('order.orderId')}</strong></TableCell>
+                <TableCell><strong>{t('order.customer')}</strong></TableCell>
+                <TableCell><strong>{t('order.cashier')}</strong></TableCell>
+                <TableCell align="right"><strong>{t('order.total')}</strong></TableCell>
+                <TableCell><strong>{t('order.status')}</strong></TableCell>
+                <TableCell><strong>{t('order.dateTime')}</strong></TableCell>
+                <TableCell><strong>{t('order.prescription')}</strong></TableCell>
+                <TableCell align="center"><strong>{t('order.actions')}</strong></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -436,12 +442,12 @@ export default function OrderManagementPage() {
                   <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                     <LocalHospital sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                     <Typography variant="h6" color="textSecondary" gutterBottom>
-                      No orders found
+                      {t('order.noOrdersFound')}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
                       {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' 
-                        ? 'Try adjusting your search or filters' 
-                        : 'No orders have been created yet'
+                        ? t('order.tryAdjustingSearch') 
+                        : t('order.noOrdersCreated')
                       }
                     </Typography>
                   </TableCell>
@@ -465,13 +471,13 @@ export default function OrderManagementPage() {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Person color="action" />
                         <Typography>
-                          {order.customerName || "Walk-in Customer"}
+                          {order.customerName || t('order.walkInCustomer')}
                         </Typography>
                       </Box>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {order.cashier?.name || "User #" + order.cashierId}
+                        {order.cashier?.name || t('order.userId', { id: order.cashierId })}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
@@ -503,7 +509,7 @@ export default function OrderManagementPage() {
                         <Badge color="primary" badgeContent="✓">
                           <Chip 
                             icon={<PictureAsPdf />} 
-                            label="Uploaded" 
+                            label={t('order.uploaded')}
                             color="primary" 
                             size="small"
                             variant="outlined"
@@ -511,7 +517,7 @@ export default function OrderManagementPage() {
                         </Badge>
                       ) : (
                         <Chip 
-                          label="Not Required" 
+                          label={t('order.notRequired')}
                           size="small" 
                           variant="outlined"
                           color="default"
@@ -520,7 +526,7 @@ export default function OrderManagementPage() {
                     </TableCell>
                     <TableCell align="center">
                       {order.prescriptionPhoto && (
-                        <Tooltip title="View Prescription">
+                        <Tooltip title={t('order.viewPrescription')}>
                           <IconButton
                             color="primary"
                             onClick={() => handleViewPrescription(order)}
@@ -561,7 +567,7 @@ export default function OrderManagementPage() {
           backgroundColor: alpha(theme.palette.primary.main, 0.04)
         }}>
           <Typography variant="h6" fontWeight="bold">
-            Prescription Document
+            {t('order.prescriptionDocument')}
           </Typography>
           <IconButton onClick={() => setOpenImageDialog(false)}>
             <Close />
@@ -572,7 +578,7 @@ export default function OrderManagementPage() {
           {selectedImage ? (
             <Box textAlign="center" my={2}>
               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <Tooltip title="Zoom Out">
+                <Tooltip title={t('order.zoomOut')}>
                   <IconButton onClick={handleZoomOut} disabled={imageZoom <= 0.5}>
                     <ZoomOut />
                   </IconButton>
@@ -583,7 +589,7 @@ export default function OrderManagementPage() {
                   clickable
                   variant="outlined"
                 />
-                <Tooltip title="Zoom In">
+                <Tooltip title={t('order.zoomIn')}>
                   <IconButton onClick={handleZoomIn} disabled={imageZoom >= 3}>
                     <ZoomIn />
                   </IconButton>
@@ -616,7 +622,7 @@ export default function OrderManagementPage() {
             </Box>
           ) : (
             <Typography color="textSecondary" textAlign="center" py={4}>
-              No image available
+              {t('order.noImageAvailable')}
             </Typography>
           )}
         </DialogContent>
@@ -629,7 +635,7 @@ export default function OrderManagementPage() {
               startIcon={<Download />}
               onClick={handleDownload}
             >
-              Download
+              {t('order.download')}
             </Button>
             <Button
               variant="contained"
@@ -637,7 +643,7 @@ export default function OrderManagementPage() {
               startIcon={<Print />}
               onClick={handlePrint}
             >
-              Print
+              {t('order.print')}
             </Button>
           </DialogActions>
         )}

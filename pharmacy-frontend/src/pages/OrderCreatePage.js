@@ -47,7 +47,10 @@ import { createOrder } from "../services/api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
-const steps = ['Customer Info', 'Add Medicines', 'Review & Complete'];
+// ✅ Add translation hook
+import { useTranslation } from 'react-i18next';
+
+const steps = ['order.customerInfo', 'order.addMedicines', 'order.reviewComplete'];
 
 export default function OrderCreatePage() {
   const [items, setItems] = useState([]);
@@ -71,19 +74,22 @@ export default function OrderCreatePage() {
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
 
+  // ✅ Initialize translation
+  const { t } = useTranslation();
+
   // ✅ Check if any selected medicine requires prescription
   const requiresPrescription = items.some(item => item.requiresPrescription);
 
   // ✅ Add medicine with default quantity = 1
   const handleAddMedicine = (medicine) => {
     if (!medicine || !medicine.id || typeof medicine.name !== 'string') {
-      toast.error("Invalid medicine data");
+      toast.error(t('common.invalidMedicineData'));
       return;
     }
 
     const price = parseFloat(medicine.price);
     if (isNaN(price)) {
-      toast.error(`Invalid price for ${medicine.name}`);
+      toast.error(t('common.invalidPrice', { name: medicine.name }));
       return;
     }
 
@@ -94,7 +100,7 @@ export default function OrderCreatePage() {
       const updatedItems = [...items];
       updatedItems[existingIndex].quantity += 1;
       setItems(updatedItems);
-      toast.success(`Increased quantity for ${medicine.name}`);
+      toast.success(t('common.quantityIncreased', { name: medicine.name }));
     } else {
       // Add new medicine
       setItems((prev) => [
@@ -107,7 +113,7 @@ export default function OrderCreatePage() {
           requiresPrescription: !!medicine.requiresPrescription
         },
       ]);
-      toast.success(`Added: ${medicine.name}`);
+      toast.success(t('common.addedMedicine', { name: medicine.name }));
     }
   };
 
@@ -115,7 +121,7 @@ export default function OrderCreatePage() {
   const handleRemoveMedicine = (index) => {
     const medicineName = items[index].name;
     setItems((prev) => prev.filter((_, i) => i !== index));
-    toast.info(`Removed: ${medicineName}`);
+    toast.info(t('common.removedMedicine', { name: medicineName }));
   };
 
   // ✅ Update quantity
@@ -151,18 +157,18 @@ export default function OrderCreatePage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error("Only image files are allowed.");
+      toast.error(t('common.imageOnly'));
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be less than 5MB.");
+      toast.error(t('common.imageTooLarge'));
       return;
     }
 
     setPrescriptionPhoto(file);
     setPhotoPreview(URL.createObjectURL(file));
-    toast.success("✅ Prescription photo uploaded!");
+    toast.success(t('common.photoUploaded'));
   };
 
   // ✅ Open camera or gallery
@@ -173,17 +179,17 @@ export default function OrderCreatePage() {
   const clearPhoto = () => {
     setPrescriptionPhoto(null);
     setPhotoPreview("");
-    toast.info("Prescription photo removed.");
+    toast.info(t('common.photoRemoved'));
   };
 
   // ✅ Navigation between steps
   const handleNext = () => {
     if (activeStep === 0 && (!customerName.trim() && !customerPhone.trim())) {
-      toast.info("Customer details are optional. You can proceed with walk-in customer.");
+      toast.info(t('order.optionalCustomerDetails'));
     }
     
     if (activeStep === 1 && items.length === 0) {
-      toast.error("Please add at least one medicine before proceeding.");
+      toast.error(t('order.addAtLeastOneMedicine'));
       return;
     }
     
@@ -197,22 +203,22 @@ export default function OrderCreatePage() {
   // ✅ Submit order
   const handleSubmit = async () => {
     if (items.length === 0) {
-      setError("Please add at least one medicine");
+      setError(t('order.atLeastOneMedicine'));
       return;
     }
 
     // Validate items
     for (let item of items) {
       if (!item.medicineId || !item.quantity || item.quantity < 1) {
-        toast.error("All items must have valid medicine and quantity ≥ 1");
+        toast.error(t('order.validQuantityRequired'));
         return;
       }
     }
 
     // Enforce prescription photo
     if (requiresPrescription && !prescriptionPhoto) {
-      setError("This order contains prescription-only medicines. Please upload a photo of the prescription.");
-      toast.warn("📸 Prescription required!");
+      setError(t('order.prescriptionRequired'));
+      toast.warn(t('order.uploadPrescriptionPhoto'));
       return;
     }
 
@@ -224,7 +230,7 @@ export default function OrderCreatePage() {
         quantity: Number(item.quantity)
       }))
     ));
-    formData.append("customerName", customerName.trim() || "Walk-in Customer");
+    formData.append("customerName", customerName.trim() || t('order.walkInCustomer'));
     formData.append("customerPhone", customerPhone.trim() || "");
     formData.append("status", "completed");
 
@@ -238,9 +244,9 @@ export default function OrderCreatePage() {
     try {
       const response = await createOrder(formData);
       const orderId = response.data?.order?.id;
-      if (!orderId) throw new Error("No order ID returned");
+      if (!orderId) throw new Error(t('order.noOrderId'));
 
-      toast.success("🎉 Order created successfully!");
+      toast.success(t('order.createdSuccessfully'));
       setTimeout(() => {
         navigate(`/receipt/${orderId}`);
       }, 1500);
@@ -263,16 +269,16 @@ export default function OrderCreatePage() {
             <CardContent>
               <Box display="flex" alignItems="center" gap={1} mb={3}>
                 <Person color="primary" />
-                <Typography variant="h6">Customer Information</Typography>
+                <Typography variant="h6">{t('order.customerInformation')}</Typography>
               </Box>
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                   <TextField
-                    label="Customer Name"
+                    label={t('order.customerName')}
                     fullWidth
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="e.g., John Doe"
+                    placeholder={t('order.exampleName')}
                     InputProps={{
                       startAdornment: <Person sx={{ mr: 1, color: 'text.secondary' }} />
                     }}
@@ -280,11 +286,11 @@ export default function OrderCreatePage() {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField
-                    label="Customer Phone"
+                    label={t('order.customerPhone')}
                     fullWidth
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="e.g., +251912345678"
+                    placeholder={t('order.examplePhone')}
                     InputProps={{
                       startAdornment: <Phone sx={{ mr: 1, color: 'text.secondary' }} />
                     }}
@@ -292,7 +298,7 @@ export default function OrderCreatePage() {
                 </Grid>
               </Grid>
               <Alert severity="info" sx={{ mt: 2 }}>
-                Customer details are optional. If not provided, order will be saved as "Walk-in Customer".
+                {t('order.customerDetailsOptional')}
               </Alert>
             </CardContent>
           </Card>
@@ -305,7 +311,7 @@ export default function OrderCreatePage() {
               <CardContent>
                 <Box display="flex" alignItems="center" gap={1} mb={2}>
                   <LocalHospital color="primary" />
-                  <Typography variant="h6">Medicines</Typography>
+                  <Typography variant="h6">{t('order.medicines')}</Typography>
                 </Box>
                 <Button
                   variant="contained"
@@ -315,7 +321,7 @@ export default function OrderCreatePage() {
                   disabled={loading}
                   sx={{ mb: 2 }}
                 >
-                  Add Medicine
+                  {t('order.addMedicine')}
                 </Button>
 
                 {items.length > 0 ? (
@@ -323,12 +329,12 @@ export default function OrderCreatePage() {
                     <Table size="small">
                       <TableHead>
                         <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.04) }}>
-                          <TableCell><strong>Medicine</strong></TableCell>
-                          <TableCell><strong>Type</strong></TableCell>
-                          <TableCell><strong>Price</strong></TableCell>
-                          <TableCell><strong>Quantity</strong></TableCell>
-                          <TableCell><strong>Total</strong></TableCell>
-                          <TableCell><strong>Action</strong></TableCell>
+                          <TableCell><strong>{t('order.medicine')}</strong></TableCell>
+                          <TableCell><strong>{t('order.type')}</strong></TableCell>
+                          <TableCell><strong>{t('order.price')}</strong></TableCell>
+                          <TableCell><strong>{t('order.quantity')}</strong></TableCell>
+                          <TableCell><strong>{t('order.total')}</strong></TableCell>
+                          <TableCell><strong>{t('order.action')}</strong></TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -348,7 +354,7 @@ export default function OrderCreatePage() {
                             </TableCell>
                             <TableCell>
                               <Chip
-                                label={item.requiresPrescription ? '℞ Only' : 'OTC'}
+                                label={item.requiresPrescription ? t('order.rxOnly') : t('order.otc')}
                                 color={item.requiresPrescription ? 'error' : 'success'}
                                 size="small"
                                 variant="outlined"
@@ -388,10 +394,10 @@ export default function OrderCreatePage() {
                   <Paper sx={{ p: 4, textAlign: 'center', bgcolor: alpha(theme.palette.background.default, 0.5) }}>
                     <LocalHospital sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                     <Typography variant="h6" color="textSecondary" gutterBottom>
-                      No Medicines Added
+                      {t('order.noMedicinesAdded')}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
-                      Click "Add Medicine" to start building your order
+                      {t('order.clickToAddMedicine')}
                     </Typography>
                   </Paper>
                 )}
@@ -405,11 +411,11 @@ export default function OrderCreatePage() {
                   <Box display="flex" alignItems="center" gap={1} mb={2}>
                     <Warning color="warning" />
                     <Typography variant="h6" color="warning.dark">
-                      Prescription Required
+                      {t('order.prescriptionRequiredTitle')}
                     </Typography>
                   </Box>
                   <Typography variant="body2" sx={{ mb: 2 }}>
-                    This order contains prescription-only medicines. You must upload a clear photo of the prescription.
+                    {t('order.prescriptionRequiredText')}
                   </Typography>
 
                   {!photoPreview ? (
@@ -436,7 +442,7 @@ export default function OrderCreatePage() {
                         onClick={openCamera}
                         color="warning"
                       >
-                        Take Photo
+                        {t('order.takePhoto')}
                       </Button>
 
                       <Button
@@ -444,12 +450,12 @@ export default function OrderCreatePage() {
                         startIcon={<Upload />}
                         onClick={openGallery}
                       >
-                        Choose from Gallery
+                        {t('order.chooseFromGallery')}
                       </Button>
                     </Box>
                   ) : (
                     <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="body2" sx={{ mb: 1 }}>Prescription Photo:</Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>{t('order.prescriptionPhoto')}:</Typography>
                       <Box
                         component="img"
                         src={photoPreview}
@@ -469,7 +475,7 @@ export default function OrderCreatePage() {
                           color="error"
                           size="small"
                         >
-                          Remove Photo
+                          {t('common.removePhoto')}
                         </Button>
                       </Box>
                     </Box>
@@ -486,29 +492,29 @@ export default function OrderCreatePage() {
             <CardContent>
               <Box display="flex" alignItems="center" gap={1} mb={3}>
                 <Receipt color="primary" />
-                <Typography variant="h6">Order Summary</Typography>
+                <Typography variant="h6">{t('order.orderSummary')}</Typography>
               </Box>
 
               {/* Customer Info Summary */}
               <Paper sx={{ p: 2, mb: 3, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
                 <Typography variant="subtitle1" gutterBottom>
-                  Customer Details
+                  {t('order.customerDetails')}
                 </Typography>
-                <Typography><strong>Name:</strong> {customerName || "Walk-in Customer"}</Typography>
-                <Typography><strong>Phone:</strong> {customerPhone || "Not provided"}</Typography>
+                <Typography><strong>{t('order.name')}:</strong> {customerName || t('order.walkInCustomer')}</Typography>
+                <Typography><strong>{t('order.phone')}:</strong> {customerPhone || t('order.notProvided')}</Typography>
               </Paper>
 
               {/* Order Items Summary */}
               <Box sx={{ mb: 3 }}>
                 <Typography variant="subtitle1" gutterBottom>
-                  Order Items ({items.length})
+                  {t('order.orderItems', { count: items.length })}
                 </Typography>
                 {items.map((item, index) => (
                   <Paper key={index} sx={{ p: 2, mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
                       <Typography fontWeight="medium">{item.name}</Typography>
                       <Chip
-                        label={item.requiresPrescription ? '℞ Only' : 'OTC'}
+                        label={item.requiresPrescription ? t('order.rxOnly') : t('order.otc')}
                         color={item.requiresPrescription ? 'error' : 'success'}
                         size="small"
                       />
@@ -529,7 +535,7 @@ export default function OrderCreatePage() {
               <Paper sx={{ p: 3, bgcolor: alpha(theme.palette.success.main, 0.05) }}>
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                   <Typography variant="h6">
-                    Total Amount:
+                    {t('order.totalAmount')}:
                   </Typography>
                   <Typography variant="h4" color="success.main" fontWeight="bold">
                     ${calculateTotal().toFixed(2)}
@@ -539,7 +545,7 @@ export default function OrderCreatePage() {
 
               {requiresPrescription && prescriptionPhoto && (
                 <Alert severity="success" sx={{ mt: 2 }} icon={<CheckCircle />}>
-                  Prescription photo uploaded successfully
+                  {t('order.photoUploadedSuccessfully')}
                 </Alert>
               )}
             </CardContent>
@@ -568,10 +574,10 @@ export default function OrderCreatePage() {
       >
         <ShoppingCartCheckout sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
         <Typography variant="h3" fontWeight="bold" gutterBottom>
-          Create New Order
+          {t('order.createNewOrder')}
         </Typography>
         <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          Step-by-step order creation process
+          {t('order.stepByStepProcess')}
         </Typography>
       </Box>
 
@@ -579,7 +585,7 @@ export default function OrderCreatePage() {
       <Stepper activeStep={activeStep} sx={{ mb: 6 }}>
         {steps.map((label) => (
           <Step key={label}>
-            <StepLabel>{label}</StepLabel>
+            <StepLabel>{t(label)}</StepLabel>
           </Step>
         ))}
       </Stepper>
@@ -604,7 +610,7 @@ export default function OrderCreatePage() {
           disabled={activeStep === 0 || loading}
           variant="outlined"
         >
-          Back
+          {t('common.back')}
         </Button>
 
         <Box sx={{ display: 'flex', gap: 2 }}>
@@ -629,7 +635,7 @@ export default function OrderCreatePage() {
                 transition: 'all 0.3s ease',
               }}
             >
-              {loading ? 'Processing...' : 'Complete Order'}
+              {loading ? t('common.processing') : t('order.completeOrder')}
             </Button>
           ) : (
             <Button
@@ -638,7 +644,7 @@ export default function OrderCreatePage() {
               disabled={activeStep === 1 && items.length === 0}
               endIcon={<CheckCircle />}
             >
-              {activeStep === steps.length - 2 ? 'Review Order' : 'Next'}
+              {activeStep === steps.length - 2 ? t('order.reviewOrder') : t('common.next')}
             </Button>
           )}
         </Box>

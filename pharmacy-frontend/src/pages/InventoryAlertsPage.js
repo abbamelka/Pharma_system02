@@ -45,6 +45,9 @@ import {
 import { getLowStockAlerts, getExpiringSoonAlerts } from "../services/api";
 import { toast } from "react-toastify";
 
+// ✅ Add translation hook
+import { useTranslation } from 'react-i18next';
+
 export default function InventoryAlertsPage() {
   const [activeTab, setActiveTab] = useState(0);
   const [lowStockAlerts, setLowStockAlerts] = useState([]);
@@ -54,6 +57,9 @@ export default function InventoryAlertsPage() {
   const [error, setError] = useState("");
 
   const theme = useTheme();
+
+  // ✅ Initialize translation
+  const { t } = useTranslation();
 
   const fetchAlerts = async () => {
     setLoading(true);
@@ -72,11 +78,11 @@ export default function InventoryAlertsPage() {
       now.setHours(0, 0, 0, 0);
 
       const mappedLowStock = lowStockData.map(item => ({
-        medicineName: item.Medicine?.name || "Unknown",
+        medicineName: item.Medicine?.name || t('alerts.unknown'),
         batchNumber: item.batchNumber,
         currentStock: item.quantity,
         expiryDate: item.expiryDate,
-        supplierName: item.Supplier?.name || "N/A",
+        supplierName: item.Supplier?.name || t('common.na'),
         medicineId: item.Medicine?.id,
         category: item.Medicine?.category
       }));
@@ -90,21 +96,21 @@ export default function InventoryAlertsPage() {
 
         if (expiry < now) {
           mappedExpired.push({
-            medicineName: item.Medicine?.name || "Unknown",
+            medicineName: item.Medicine?.name || t('alerts.unknown'),
             batchNumber: item.batchNumber,
             currentStock: item.quantity,
             expiryDate: item.expiryDate,
-            supplierName: item.Supplier?.name || "N/A",
+            supplierName: item.Supplier?.name || t('common.na'),
             medicineId: item.Medicine?.id,
             category: item.Medicine?.category
           });
         } else {
           mappedExpiring.push({
-            medicineName: item.Medicine?.name || "Unknown",
+            medicineName: item.Medicine?.name || t('alerts.unknown'),
             batchNumber: item.batchNumber,
             currentStock: item.quantity,
             expiryDate: item.expiryDate,
-            supplierName: item.Supplier?.name || "N/A",
+            supplierName: item.Supplier?.name || t('common.na'),
             medicineId: item.Medicine?.id,
             category: item.Medicine?.category
           });
@@ -119,8 +125,8 @@ export default function InventoryAlertsPage() {
       setExpiredBatches(mappedExpired);
     } catch (err) {
       console.error("Error fetching alerts:", err);
-      setError("Failed to load inventory alerts");
-      toast.error("❌ Failed to load alerts");
+      setError(t('alerts.failedToLoadAlerts'));
+      toast.error(`❌ ${t('alerts.failedToLoadAlerts')}`);
     } finally {
       setLoading(false);
     }
@@ -150,10 +156,10 @@ export default function InventoryAlertsPage() {
     const now = new Date();
     const daysUntilExpiry = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
     
-    if (daysUntilExpiry < 0) return { color: 'error', label: 'Expired', icon: <Dangerous /> };
-    if (daysUntilExpiry <= 7) return { color: 'error', label: `${daysUntilExpiry}d`, icon: <Dangerous /> };
-    if (daysUntilExpiry <= 30) return { color: 'warning', label: `${daysUntilExpiry}d`, icon: <Warning /> };
-    return { color: 'info', label: `${daysUntilExpiry}d`, icon: <Schedule /> };
+    if (daysUntilExpiry < 0) return { color: 'error', label: t('alerts.expired'), icon: <Dangerous /> };
+    if (daysUntilExpiry <= 7) return { color: 'error', label: t('alerts.daysLeft', { days: daysUntilExpiry }), icon: <Dangerous /> };
+    if (daysUntilExpiry <= 30) return { color: 'warning', label: t('alerts.daysLeft', { days: daysUntilExpiry }), icon: <Warning /> };
+    return { color: 'info', label: t('alerts.daysLeft', { days: daysUntilExpiry }), icon: <Schedule /> };
   };
 
   const getCategoryColor = (category) => {
@@ -179,7 +185,7 @@ export default function InventoryAlertsPage() {
       >
         <CircularProgress size={60} />
         <Typography variant="h6" color="textSecondary">
-          Loading inventory alerts...
+          {t('alerts.loadingAlerts')}
         </Typography>
       </Box>
     );
@@ -192,7 +198,7 @@ export default function InventoryAlertsPage() {
           severity="error"
           action={
             <Button color="inherit" onClick={fetchAlerts}>
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
@@ -219,10 +225,10 @@ export default function InventoryAlertsPage() {
       >
         <NotificationImportant sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
         <Typography variant="h3" fontWeight="bold" gutterBottom>
-          Inventory Alerts
+          {t('alerts.inventoryAlerts')}
         </Typography>
         <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          Critical notifications for stock levels and expiry dates
+          {t('alerts.criticalNotifications')}
         </Typography>
       </Box>
 
@@ -238,7 +244,7 @@ export default function InventoryAlertsPage() {
                 {totalAlerts}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Total Alerts
+                {t('alerts.totalAlerts')}
               </Typography>
             </CardContent>
           </Card>
@@ -254,7 +260,7 @@ export default function InventoryAlertsPage() {
                 {lowStockAlerts.length}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Low Stock
+                {t('alerts.lowStock')}
               </Typography>
             </CardContent>
           </Card>
@@ -270,7 +276,7 @@ export default function InventoryAlertsPage() {
                 {expiringSoonAlerts.length}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Expiring Soon
+                {t('alerts.expiringSoon')}
               </Typography>
             </CardContent>
           </Card>
@@ -286,7 +292,7 @@ export default function InventoryAlertsPage() {
                 {expiredBatches.length}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Expired
+                {t('alerts.expired')}
               </Typography>
             </CardContent>
           </Card>
@@ -299,7 +305,7 @@ export default function InventoryAlertsPage() {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Inventory />
-              Alert Dashboard
+              {t('alerts.alertDashboard')}
             </Typography>
             <Button
               variant="outlined"
@@ -307,7 +313,7 @@ export default function InventoryAlertsPage() {
               onClick={fetchAlerts}
               disabled={loading}
             >
-              Refresh Alerts
+              {t('alerts.refreshAlerts')}
             </Button>
           </Box>
         </CardContent>
@@ -333,21 +339,21 @@ export default function InventoryAlertsPage() {
                 <Warning />
               </Badge>} 
               iconPosition="start"
-              label="Low Stock Alerts" 
+              label={t('alerts.lowStockAlerts')} 
             />
             <Tab 
               icon={<Badge badgeContent={expiringSoonAlerts.length} color="warning">
                 <Schedule />
               </Badge>} 
               iconPosition="start"
-              label="Expiring Soon" 
+              label={t('alerts.expiringSoon')} 
             />
             <Tab 
               icon={<Badge badgeContent={expiredBatches.length} color="error">
                 <Dangerous />
               </Badge>} 
               iconPosition="start"
-              label="Expired Batches" 
+              label={t('alerts.expiredBatches')} 
             />
           </Tabs>
 
@@ -357,10 +363,10 @@ export default function InventoryAlertsPage() {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Warning color="error" />
-                  Low Stock Medicines (Below 5 units)
+                  {t('alerts.lowStockMedicines')}
                 </Typography>
                 <Chip 
-                  label={`${lowStockAlerts.length} alerts`} 
+                  label={t('alerts.alertsCount', { count: lowStockAlerts.length })} 
                   color="error" 
                   variant="outlined" 
                 />
@@ -370,10 +376,10 @@ export default function InventoryAlertsPage() {
                 <Box sx={{ textAlign: 'center', py: 6 }}>
                   <TrendingUp sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
                   <Typography variant="h6" color="success.main" gutterBottom>
-                    ✅ All Stock Levels Are Healthy
+                    {t('alerts.allStockHealthy')}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    No medicines are currently below the minimum stock threshold
+                    {t('alerts.noLowStock')}
                   </Typography>
                 </Box>
               ) : (
@@ -381,12 +387,12 @@ export default function InventoryAlertsPage() {
                   <Table>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: alpha(theme.palette.error.main, 0.04) }}>
-                        <TableCell><strong>Medicine</strong></TableCell>
-                        <TableCell><strong>Batch</strong></TableCell>
-                        <TableCell><strong>Category</strong></TableCell>
-                        <TableCell><strong>Current Stock</strong></TableCell>
-                        <TableCell><strong>Expiry Date</strong></TableCell>
-                        <TableCell><strong>Supplier</strong></TableCell>
+                        <TableCell><strong>{t('alerts.medicine')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.batch')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.category')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.currentStock')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.expiryDate')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.supplier')}</strong></TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -405,7 +411,7 @@ export default function InventoryAlertsPage() {
                                 {item.medicineName}
                               </Typography>
                               <Typography variant="caption" color="textSecondary">
-                                ID: #{item.medicineId}
+                                {t('alerts.idNumber', { id: item.medicineId })}
                               </Typography>
                             </Box>
                           </TableCell>
@@ -419,7 +425,7 @@ export default function InventoryAlertsPage() {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={item.category?.toUpperCase() || 'N/A'}
+                              label={item.category?.toUpperCase() || t('common.na')}
                               color={getCategoryColor(item.category)}
                               size="small"
                               variant="outlined"
@@ -427,7 +433,7 @@ export default function InventoryAlertsPage() {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={`${item.currentStock} units`}
+                              label={t('alerts.units', { quantity: item.currentStock })}
                               color={getStockColor(item.currentStock)}
                               size="small"
                               variant="filled"
@@ -464,10 +470,10 @@ export default function InventoryAlertsPage() {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Schedule color="warning" />
-                  Batches Expiring in Next 30 Days
+                  {t('alerts.expiringNext30Days')}
                 </Typography>
                 <Chip 
-                  label={`${expiringSoonAlerts.length} batches`} 
+                  label={t('alerts.batchesCount', { count: expiringSoonAlerts.length })} 
                   color="warning" 
                   variant="outlined" 
                 />
@@ -477,10 +483,10 @@ export default function InventoryAlertsPage() {
                 <Box sx={{ textAlign: 'center', py: 6 }}>
                   <CalendarToday sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
                   <Typography variant="h6" color="success.main" gutterBottom>
-                    ✅ No Expiring Batches
+                    {t('alerts.noExpiringBatches')}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    All batches are within safe expiry dates
+                    {t('alerts.allBatchesSafe')}
                   </Typography>
                 </Box>
               ) : (
@@ -488,12 +494,12 @@ export default function InventoryAlertsPage() {
                   <Table>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: alpha(theme.palette.warning.main, 0.04) }}>
-                        <TableCell><strong>Medicine</strong></TableCell>
-                        <TableCell><strong>Batch</strong></TableCell>
-                        <TableCell><strong>Category</strong></TableCell>
-                        <TableCell><strong>Stock</strong></TableCell>
-                        <TableCell><strong>Expiry Status</strong></TableCell>
-                        <TableCell><strong>Supplier</strong></TableCell>
+                        <TableCell><strong>{t('alerts.medicine')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.batch')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.category')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.stock')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.expiryStatus')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.supplier')}</strong></TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -523,7 +529,7 @@ export default function InventoryAlertsPage() {
                             </TableCell>
                             <TableCell>
                               <Chip
-                                label={item.category?.toUpperCase() || 'N/A'}
+                                label={item.category?.toUpperCase() || t('common.na')}
                                 color={getCategoryColor(item.category)}
                                 size="small"
                                 variant="outlined"
@@ -531,14 +537,14 @@ export default function InventoryAlertsPage() {
                             </TableCell>
                             <TableCell>
                               <Chip
-                                label={`${item.currentStock} units`}
+                                label={t('alerts.units', { quantity: item.currentStock })}
                                 color="default"
                                 size="small"
                                 variant="outlined"
                               />
                             </TableCell>
                             <TableCell>
-                              <Tooltip title={`Expires: ${new Date(item.expiryDate).toLocaleDateString()}`}>
+                              <Tooltip title={t('alerts.expiresOn', { date: new Date(item.expiryDate).toLocaleDateString() })}>
                                 <Chip
                                   icon={expiryStatus.icon}
                                   label={expiryStatus.label}
@@ -572,10 +578,10 @@ export default function InventoryAlertsPage() {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Dangerous color="error" />
-                  Expired Medicines
+                  {t('alerts.expiredMedicines')}
                 </Typography>
                 <Chip 
-                  label={`${expiredBatches.length} expired`} 
+                  label={t('alerts.expiredCount', { count: expiredBatches.length })} 
                   color="error" 
                   variant="outlined" 
                 />
@@ -585,10 +591,10 @@ export default function InventoryAlertsPage() {
                 <Box sx={{ textAlign: 'center', py: 6 }}>
                   <CheckCircle sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
                   <Typography variant="h6" color="success.main" gutterBottom>
-                    ✅ No Expired Medicines
+                    {t('alerts.noExpiredMedicines')}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    All batches are within their validity period
+                    {t('alerts.allBatchesValid')}
                   </Typography>
                 </Box>
               ) : (
@@ -596,12 +602,12 @@ export default function InventoryAlertsPage() {
                   <Table>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: alpha(theme.palette.error.main, 0.04) }}>
-                        <TableCell><strong>Medicine</strong></TableCell>
-                        <TableCell><strong>Batch</strong></TableCell>
-                        <TableCell><strong>Category</strong></TableCell>
-                        <TableCell><strong>Stock</strong></TableCell>
-                        <TableCell><strong>Expiry Date</strong></TableCell>
-                        <TableCell><strong>Supplier</strong></TableCell>
+                        <TableCell><strong>{t('alerts.medicine')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.batch')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.category')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.stock')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.expiryDate')}</strong></TableCell>
+                        <TableCell><strong>{t('alerts.supplier')}</strong></TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -629,7 +635,7 @@ export default function InventoryAlertsPage() {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={item.category?.toUpperCase() || 'N/A'}
+                              label={item.category?.toUpperCase() || t('common.na')}
                               color={getCategoryColor(item.category)}
                               size="small"
                               variant="outlined"
@@ -637,7 +643,7 @@ export default function InventoryAlertsPage() {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={`${item.currentStock} units`}
+                              label={t('alerts.units', { quantity: item.currentStock })}
                               color="error"
                               size="small"
                               variant="outlined"

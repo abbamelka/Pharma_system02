@@ -78,7 +78,7 @@ app.use("/suppliers", require("./routes/supplier.routes"));
 app.use("/medicine", require("./routes/medicine.routes"));
 app.use("/receipts", require("./routes/receipt.routes"));
 app.use("/audit", require("./routes/audit.routes"));
-
+app.use('/ai', require('./routes/ai'));
 // =====================
 // ⚠️ Error Handler
 // =====================

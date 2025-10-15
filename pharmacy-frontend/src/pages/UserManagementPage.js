@@ -64,8 +64,15 @@ import TableSkeleton from "../components/skeletons/TableSkeleton";
 import { getAllUsers, createUser, updateUserStatus, deleteUser, resetUserPassword } from "../services/api";
 import { toast } from "react-toastify";
 
+// ✅ Add translation hook
+import { useTranslation } from 'react-i18next';
+
 export default function UserManagementPage() {
   const theme = useTheme();
+  
+  // ✅ Initialize translation
+  const { t } = useTranslation();
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -109,8 +116,8 @@ export default function UserManagementPage() {
 
       const validUsers = usersData.map(user => ({
         id: user.id,
-        username: user.username || "Unknown User",
-        email: user.email || "No Email",
+        username: user.username || t('userManagement.unknownUser'),
+        email: user.email || t('userManagement.noEmail'),
         role: user.role || "user",
         status: user.status || "active"
       }));
@@ -118,8 +125,8 @@ export default function UserManagementPage() {
       setUsers(validUsers);
     } catch (err) {
       console.error("Error fetching users:", err);
-      setError("Failed to load users. Check your connection or contact support.");
-      toast.error("❌ Failed to load users");
+      setError(t('userManagement.failedToLoadUsers'));
+      toast.error(`❌ ${t('userManagement.failedToLoadUsers')}`);
     } finally {
       setLoading(false);
     }
@@ -155,54 +162,54 @@ export default function UserManagementPage() {
 
   const handleCreateUser = async () => {
     if (!formData.username.trim()) {
-      toast.error("Username is required");
+      toast.error(t('userManagement.usernameRequired'));
       return;
     }
     if (!formData.email.trim()) {
-      toast.error("Email is required");
+      toast.error(t('userManagement.emailRequired'));
       return;
     }
     if (!formData.password || formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+      toast.error(t('userManagement.passwordMinLength'));
       return;
     }
 
     try {
       await createUser(formData);
-      toast.success("🎉 User created successfully!");
+      toast.success(t('userManagement.createdSuccessfully'));
       fetchUsers();
       setOpenCreateModal(false);
       setFormData({ username: "", email: "", password: "", role: "pharmacist" });
     } catch (err) {
-      const msg = err.response?.data?.error || "Failed to create user";
+      const msg = err.response?.data?.error || t('userManagement.failedToCreate');
       toast.error(`❌ ${msg}`);
     }
   };
 
   const handleSuspendUser = async (id, currentStatus) => {
     const action = currentStatus === "active" ? "suspend" : "activate";
-    if (!window.confirm(`Are you sure you want to ${action} this user?`)) return;
+    if (!window.confirm(t(`userManagement.confirm${action.charAt(0).toUpperCase() + action.slice(1)}`))) return;
 
     try {
       const newStatus = action === "suspend" ? "suspended" : "active";
       await updateUserStatus(id, newStatus);
-      toast.success(`✅ User ${newStatus === "active" ? "activated" : "suspended"} successfully!`);
+      toast.success(t(`userManagement.${newStatus}Success`));
       fetchUsers();
     } catch (err) {
-      const msg = err.response?.data?.error || "Failed to update user status";
+      const msg = err.response?.data?.error || t('userManagement.failedToUpdateStatus');
       toast.error(`❌ ${msg}`);
     }
   };
 
   const handleDeleteUser = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
+    if (!window.confirm(t('userManagement.confirmDelete'))) return;
 
     try {
       await deleteUser(id);
-      toast.success("🗑️ User deleted successfully!");
+      toast.success(t('userManagement.deletedSuccess'));
       fetchUsers();
     } catch (err) {
-      const msg = err.response?.data?.error || "Failed to delete user";
+      const msg = err.response?.data?.error || t('userManagement.failedToDelete');
       toast.error(`❌ ${msg}`);
     }
   };
@@ -217,20 +224,20 @@ export default function UserManagementPage() {
     const { newPassword, confirmPassword } = resetData;
 
     if (!newPassword || newPassword.length < 6) {
-      toast.error("New password must be at least 6 characters long");
+      toast.error(t('userManagement.passwordMinLength'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error(t('userManagement.passwordsDoNotMatch'));
       return;
     }
 
     try {
       await resetUserPassword(selectedUser.id, newPassword);
-      toast.success(`✅ Password reset successfully for ${selectedUser.username}`);
+      toast.success(t('userManagement.passwordResetSuccess', { username: selectedUser.username }));
       setOpenResetModal(false);
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to reset password";
+      const msg = err.response?.data?.message || t('userManagement.failedToReset');
       toast.error(`❌ ${msg}`);
     }
   };
@@ -277,7 +284,7 @@ export default function UserManagementPage() {
       >
         <CircularProgress size={60} />
         <Typography variant="h6" color="textSecondary">
-          Loading user data...
+          {t('userManagement.loadingUserData')}
         </Typography>
       </Box>
     );
@@ -290,7 +297,7 @@ export default function UserManagementPage() {
           severity="error"
           action={
             <Button color="inherit" onClick={fetchUsers}>
-              Retry
+              {t('common.retry')}
             </Button>
           }
         >
@@ -317,10 +324,10 @@ export default function UserManagementPage() {
       >
         <Group sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
         <Typography variant="h3" fontWeight="bold" gutterBottom>
-          User Management
+          {t('userManagement.userManagement')}
         </Typography>
         <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          Manage system users, roles, and access permissions
+          {t('userManagement.manageSystemUsers')}
         </Typography>
       </Box>
 
@@ -336,7 +343,7 @@ export default function UserManagementPage() {
                 {stats.total}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Total Users
+                {t('userManagement.totalUsers')}
               </Typography>
             </CardContent>
           </Card>
@@ -352,7 +359,7 @@ export default function UserManagementPage() {
                 {stats.admin}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Administrators
+                {t('userManagement.administrators')}
               </Typography>
             </CardContent>
           </Card>
@@ -368,7 +375,7 @@ export default function UserManagementPage() {
                 {stats.pharmacist}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Pharmacists
+                {t('userManagement.pharmacists')}
               </Typography>
             </CardContent>
           </Card>
@@ -384,7 +391,7 @@ export default function UserManagementPage() {
                 {stats.active}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Active Users
+                {t('userManagement.activeUsers')}
               </Typography>
             </CardContent>
           </Card>
@@ -400,7 +407,7 @@ export default function UserManagementPage() {
                 {stats.suspended}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Suspended
+                {t('userManagement.suspended')}
               </Typography>
             </CardContent>
           </Card>
@@ -413,11 +420,11 @@ export default function UserManagementPage() {
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
-                label="Search Users"
+                label={t('userManagement.searchUsers')}
                 fullWidth
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by username, email, or role..."
+                placeholder={t('userManagement.searchPlaceholder')}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -430,32 +437,32 @@ export default function UserManagementPage() {
             
             <Grid item xs={12} md={2}>
               <FormControl fullWidth>
-                <InputLabel>Role</InputLabel>
+                <InputLabel>{t('userManagement.role')}</InputLabel>
                 <Select
                   value={roleFilter}
-                  label="Role"
+                  label={t('userManagement.role')}
                   onChange={(e) => setRoleFilter(e.target.value)}
                 >
-                  <MenuItem value="all">All Roles</MenuItem>
-                  <MenuItem value="admin">Admin</MenuItem>
-                  <MenuItem value="pharmacist">Pharmacist</MenuItem>
-                  <MenuItem value="cashier">Cashier</MenuItem>
-                  <MenuItem value="doctor">Doctor</MenuItem>
+                  <MenuItem value="all">{t('userManagement.allRoles')}</MenuItem>
+                  <MenuItem value="admin">{t('userManagement.admin')}</MenuItem>
+                  <MenuItem value="pharmacist">{t('userManagement.pharmacist')}</MenuItem>
+                  <MenuItem value="cashier">{t('userManagement.cashier')}</MenuItem>
+                  <MenuItem value="doctor">{t('userManagement.doctor')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             
             <Grid item xs={12} md={2}>
               <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
+                <InputLabel>{t('userManagement.status')}</InputLabel>
                 <Select
                   value={statusFilter}
-                  label="Status"
+                  label={t('userManagement.status')}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
-                  <MenuItem value="all">All Status</MenuItem>
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="suspended">Suspended</MenuItem>
+                  <MenuItem value="all">{t('userManagement.allStatus')}</MenuItem>
+                  <MenuItem value="active">{t('userManagement.active')}</MenuItem>
+                  <MenuItem value="suspended">{t('userManagement.suspended')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -468,7 +475,7 @@ export default function UserManagementPage() {
                   onClick={() => setOpenCreateModal(true)}
                   sx={{ flex: 1 }}
                 >
-                  Create User
+                  {t('userManagement.createUser')}
                 </Button>
                 <Button
                   variant="outlined"
@@ -476,7 +483,7 @@ export default function UserManagementPage() {
                   onClick={fetchUsers}
                   disabled={loading}
                 >
-                  Refresh
+                  {t('common.refresh')}
                 </Button>
               </Box>
             </Grid>
@@ -487,7 +494,7 @@ export default function UserManagementPage() {
       {/* Results Count */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" color="textSecondary">
-          Showing {filteredUsers.length} of {users.length} users
+          {t('userManagement.showingUsers', { count: filteredUsers.length, total: users.length })}
         </Typography>
         {(searchTerm || roleFilter !== 'all' || statusFilter !== 'all') && (
           <Button
@@ -498,7 +505,7 @@ export default function UserManagementPage() {
               setStatusFilter("all");
             }}
           >
-            Clear Filters
+            {t('userManagement.clearFilters')}
           </Button>
         )}
       </Box>
@@ -515,11 +522,11 @@ export default function UserManagementPage() {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
-              <TableCell><strong>User Details</strong></TableCell>
-              <TableCell><strong>Contact Information</strong></TableCell>
-              <TableCell><strong>Role</strong></TableCell>
-              <TableCell><strong>Status</strong></TableCell>
-              <TableCell align="center"><strong>Actions</strong></TableCell>
+              <TableCell><strong>{t('userManagement.userDetails')}</strong></TableCell>
+              <TableCell><strong>{t('userManagement.contactInformation')}</strong></TableCell>
+              <TableCell><strong>{t('userManagement.role')}</strong></TableCell>
+              <TableCell><strong>{t('userManagement.status')}</strong></TableCell>
+              <TableCell align="center"><strong>{t('userManagement.actions')}</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -528,12 +535,12 @@ export default function UserManagementPage() {
                 <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                   <Group sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                   <Typography variant="h6" color="textSecondary" gutterBottom>
-                    No users found
+                    {t('userManagement.noUsersFound')}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
                     {searchTerm || roleFilter !== 'all' || statusFilter !== 'all' 
-                      ? 'Try adjusting your search or filters' 
-                      : 'Create your first user to get started'
+                      ? t('userManagement.adjustSearch') 
+                      : t('userManagement.createFirstUser')
                     }
                   </Typography>
                 </TableCell>
@@ -554,7 +561,7 @@ export default function UserManagementPage() {
                         {user.username}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
-                        ID: #{user.id}
+                        {t('userManagement.userId', { id: user.id })}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -586,7 +593,7 @@ export default function UserManagementPage() {
                   </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", gap: 1, justifyContent: 'center' }}>
-                      <Tooltip title="Reset Password">
+                      <Tooltip title={t('userManagement.resetPassword')}>
                         <IconButton
                           color="warning"
                           size="small"
@@ -598,7 +605,7 @@ export default function UserManagementPage() {
                           <LockReset />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title={user.status === 'active' ? 'Suspend User' : 'Activate User'}>
+                      <Tooltip title={user.status === 'active' ? t('userManagement.suspendUser') : t('userManagement.activateUser')}>
                         <IconButton
                           color={user.status === 'active' ? 'error' : 'success'}
                           size="small"
@@ -615,7 +622,7 @@ export default function UserManagementPage() {
                           {user.status === 'active' ? <Block /> : <CheckCircle />}
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete User">
+                      <Tooltip title={t('userManagement.deleteUser')}>
                         <IconButton
                           color="error"
                           size="small"
@@ -639,13 +646,14 @@ export default function UserManagementPage() {
       {/* Enhanced Modals */}
       <EnhancedUserModal
         open={openCreateModal}
-        title="Create New User"
+        title={t('userManagement.createNewUser')}
         formData={formData}
         handleInputChange={handleInputChange}
         handleSubmit={handleCreateUser}
         handleClose={() => setOpenCreateModal(false)}
-        submitText="Create User"
+        submitText={t('userManagement.createUser')}
         submitIcon={<CheckCircle />}
+        t={t}
       />
 
       <EnhancedResetModal
@@ -655,6 +663,7 @@ export default function UserManagementPage() {
         handleResetChange={handleResetChange}
         handleSubmit={handleResetPassword}
         handleClose={() => setOpenResetModal(false)}
+        t={t}
       />
     </Container>
   );
@@ -669,7 +678,8 @@ function EnhancedUserModal({
   handleSubmit, 
   handleClose, 
   submitText,
-  submitIcon 
+  submitIcon,
+  t 
 }) {
   const theme = useTheme();
 
@@ -700,7 +710,7 @@ function EnhancedUserModal({
           <Grid item xs={12}>
             <TextField
               name="username"
-              label="Username"
+              label={t('userManagement.username')}
               fullWidth
               value={formData.username}
               onChange={handleInputChange}
@@ -719,7 +729,7 @@ function EnhancedUserModal({
           <Grid item xs={12}>
             <TextField
               name="email"
-              label="Email Address"
+              label={t('userManagement.emailAddress')}
               type="email"
               fullWidth
               value={formData.email}
@@ -738,14 +748,14 @@ function EnhancedUserModal({
           <Grid item xs={12}>
             <TextField
               name="password"
-              label="Password"
+              label={t('userManagement.password')}
               type="password"
               fullWidth
               value={formData.password}
               onChange={handleInputChange}
               required
               inputProps={{ minLength: 6 }}
-              helperText="Minimum 6 characters"
+              helperText={t('userManagement.minimumCharacters')}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -758,17 +768,17 @@ function EnhancedUserModal({
           
           <Grid item xs={12}>
             <FormControl fullWidth required>
-              <InputLabel>Role</InputLabel>
+              <InputLabel>{t('userManagement.role')}</InputLabel>
               <Select
                 name="role"
                 value={formData.role}
-                label="Role"
+                label={t('userManagement.role')}
                 onChange={handleInputChange}
               >
-                <MenuItem value="admin">Administrator</MenuItem>
-                <MenuItem value="pharmacist">Pharmacist</MenuItem>
-                <MenuItem value="cashier">Cashier</MenuItem>
-                <MenuItem value="doctor">Doctor</MenuItem>
+                <MenuItem value="admin">{t('userManagement.administrator')}</MenuItem>
+                <MenuItem value="pharmacist">{t('userManagement.pharmacist')}</MenuItem>
+                <MenuItem value="cashier">{t('userManagement.cashier')}</MenuItem>
+                <MenuItem value="doctor">{t('userManagement.doctor')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -780,7 +790,7 @@ function EnhancedUserModal({
           onClick={handleClose} 
           variant="outlined"
         >
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button 
           onClick={handleSubmit} 
@@ -803,7 +813,8 @@ function EnhancedResetModal({
   resetData, 
   handleResetChange, 
   handleSubmit, 
-  handleClose 
+  handleClose,
+  t 
 }) {
   const theme = useTheme();
 
@@ -825,7 +836,7 @@ function EnhancedResetModal({
       }}>
         <LockReset color="warning" />
         <Typography variant="h6" fontWeight="bold">
-          Reset Password
+          {t('userManagement.resetPassword')}
         </Typography>
       </DialogTitle>
       
@@ -836,7 +847,7 @@ function EnhancedResetModal({
               {user.username}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              ID: #{user.id} • {user.role.toUpperCase()} • {user.email}
+              {t('userManagement.userInfo', { id: user.id, role: user.role, email: user.email })}
             </Typography>
           </Box>
         )}
@@ -845,13 +856,13 @@ function EnhancedResetModal({
           <Grid item xs={12}>
             <TextField
               name="newPassword"
-              label="New Password"
+              label={t('userManagement.newPassword')}
               type="password"
               fullWidth
               value={resetData.newPassword}
               onChange={handleResetChange}
               required
-              placeholder="Enter new password (min 6 chars)"
+              placeholder={t('userManagement.enterNewPassword')}
               inputProps={{ minLength: 6 }}
               InputProps={{
                 startAdornment: (
@@ -866,7 +877,7 @@ function EnhancedResetModal({
           <Grid item xs={12}>
             <TextField
               name="confirmPassword"
-              label="Confirm Password"
+              label={t('userManagement.confirmPassword')}
               type="password"
               fullWidth
               value={resetData.confirmPassword}
@@ -875,7 +886,7 @@ function EnhancedResetModal({
               error={resetData.confirmPassword && resetData.newPassword !== resetData.confirmPassword}
               helperText={
                 resetData.confirmPassword && resetData.newPassword !== resetData.confirmPassword 
-                  ? "Passwords do not match" 
+                  ? t('userManagement.passwordsDoNotMatch') 
                   : ""
               }
               InputProps={{
@@ -895,7 +906,7 @@ function EnhancedResetModal({
           onClick={handleClose} 
           variant="outlined"
         >
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button 
           onClick={handleSubmit} 
@@ -904,7 +915,7 @@ function EnhancedResetModal({
           startIcon={<LockReset />}
           sx={{ px: 4 }}
         >
-          Reset Password
+          {t('userManagement.resetPassword')}
         </Button>
       </DialogActions>
     </Dialog>

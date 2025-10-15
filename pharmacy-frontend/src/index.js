@@ -6,7 +6,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { ThemeContextProvider } from "./context/ThemeContext";
 import { CssBaseline } from '@mui/material'; // ✅ Import here
-
+import './i18n'; // ← Initializes i18n
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

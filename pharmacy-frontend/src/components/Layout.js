@@ -45,11 +45,14 @@ import {
   MedicalServices,
   Notifications,
   Settings,
+  Translate as TranslateIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme as useCustomTheme } from "../context/ThemeContext";
+import { useTranslation } from 'react-i18next';
 import { Outlet } from "react-router-dom";
+import AIChatBot from "./AIChatBot"; // Ensure this path is correct
 
 const drawerWidth = 280;
 const collapsedDrawerWidth = 70;
@@ -60,12 +63,17 @@ export default function Layout() {
   const location = useLocation();
   const { user, logout } = useAuth();
   const { mode, toggleTheme } = useCustomTheme();
+  const { i18n, t } = useTranslation();
   const [anchorEl, setAnchorEl] = useState(null);
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const [openSections, setOpenSections] = useState({});
 
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
+
+  const handleLanguageMenuOpen = (event) => setMenuAnchorEl(event.currentTarget);
+  const handleLanguageMenuClose = () => setMenuAnchorEl(null);
 
   const handleNavigate = (path) => {
     navigate(path);
@@ -128,6 +136,8 @@ export default function Layout() {
         >
           <Toolbar />
           <Outlet />
+          {/* ✅ AI ChatBot added here — visible even when not logged in */}
+          <AIChatBot />
         </Box>
       </Box>
     );
@@ -136,42 +146,56 @@ export default function Layout() {
   const username = user.username || user.email?.split("@")[0] || "User";
   const role = user.role || "user";
 
+  // Supported languages
+  const languages = [
+    { code: 'en', name: t('common.english'), flag: '🇬🇧' },
+    { code: 'am', name: t('common.amharic'), flag: '🇪🇹' },
+    { code: 'om', name: t('common.oromo'), flag: '🇪🇹' }
+  ];
+
+  const currentLang = languages.find(l => l.code === i18n.language) || languages[0];
+
+  const changeLanguage = (code) => {
+    i18n.changeLanguage(code);
+    handleLanguageMenuClose();
+  };
+
   // Enhanced menu structure with sections
   const menuSections = [
     {
-      title: "Dashboard",
+      title: t('layout.dashboard'),
       items: [
-        { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard", roles: ["admin"], badge: 0 },
+        { text: t('layout.dashboard'), icon: <DashboardIcon />, path: "/dashboard", roles: ["admin"], badge: 0 },
       ]
     },
     {
-      title: "Billing & Orders",
+      title: t('layout.billingAndOrders'),
       items: [
-        { text: "Create Order", icon: <ReceiptIcon />, path: "/orders/create", roles: ["admin", "cashier"], badge: 0 },
-        { text: "Order Management", icon: <ListAltIcon />, path: "/orders/manage", roles: ["admin", "pharmacist"], badge: 3 },
+        { text: t('layout.createOrder'), icon: <ReceiptIcon />, path: "/orders/create", roles: ["admin", "cashier"], badge: 0 },
+        { text: t('layout.orderManagement'), icon: <ListAltIcon />, path: "/orders/manage", roles: ["admin", "pharmacist"], badge: 3 },
       ]
     },
     {
-      title: "Medicines & Inventory",
+      title: t('layout.medicinesAndInventory'),
       items: [
-        { text: "Medicine Management", icon: <MedicineIcon />, path: "/medicines/manage", roles: ["admin", "pharmacist"], badge: 0 },
-        { text: "Inventory Management", icon: <InventoryIcon />, path: "/inventory/manage", roles: ["admin", "pharmacist"], badge: 5 },
-        { text: "Inventory Alerts", icon: <WarningIcon />, path: "/inventory/alerts", roles: ["admin", "pharmacist"], badge: 2 },
-        { text: "Supplier Management", icon: <BusinessIcon />, path: "/suppliers", roles: ["admin", "pharmacist"], badge: 0 },
+        { text: t('layout.medicineManagement'), icon: <MedicineIcon />, path: "/medicines/manage", roles: ["admin", "pharmacist"], badge: 0 },
+        { text: t('layout.inventoryManagement'), icon: <InventoryIcon />, path: "/inventory/manage", roles: ["admin", "pharmacist"], badge: 5 },
+        { text: t('layout.inventoryAlerts'), icon: <WarningIcon />, path: "/inventory/alerts", roles: ["admin", "pharmacist"], badge: 2 },
+        { text: t('layout.supplierManagement'), icon: <BusinessIcon />, path: "/suppliers", roles: ["admin", "pharmacist"], badge: 0 },
       ]
     },
     {
-      title: "Prescriptions",
+      title: t('layout.prescriptions'),
       items: [
-        { text: "Prescriptions", icon: <DescriptionIcon />, path: "/prescriptions", roles: ["admin", "pharmacist", "doctor"], badge: 0 },
-        { text: "Prescription Management", icon: <DescriptionIcon />, path: "/prescriptions/manage", roles: ["admin", "pharmacist", "doctor"], badge: 7 },
+        { text: t('layout.prescriptions'), icon: <DescriptionIcon />, path: "/prescriptions", roles: ["admin", "pharmacist", "doctor"], badge: 0 },
+        { text: t('layout.prescriptionManagement'), icon: <DescriptionIcon />, path: "/prescriptions/manage", roles: ["admin", "pharmacist", "doctor"], badge: 7 },
       ]
     },
     {
-      title: "Administration",
+      title: t('layout.administration'),
       items: [
-        { text: "User Management", icon: <PeopleIcon />, path: "/users", roles: ["admin"], badge: 0 },
-        { text: "Audit Logs", icon: <HistoryIcon />, path: "/audit-logs", roles: ["admin"], badge: 0 },
+        { text: t('layout.userManagement'), icon: <PeopleIcon />, path: "/users", roles: ["admin"], badge: 0 },
+        { text: t('layout.auditLogs'), icon: <HistoryIcon />, path: "/audit-logs", roles: ["admin"], badge: 0 },
       ]
     }
   ];
@@ -249,7 +273,7 @@ export default function Layout() {
                   PharmaCare
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
-                  Management System
+                  {t('layout.managementSystem')}
                 </Typography>
               </Box>
             </Box>
@@ -262,7 +286,7 @@ export default function Layout() {
               }} 
             />
           )}
-          <Tooltip title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+          <Tooltip title={collapsed ? t('layout.expandSidebar') : t('layout.collapseSidebar')}>
             <IconButton 
               onClick={toggleCollapse}
               size="small"
@@ -391,7 +415,7 @@ export default function Layout() {
         {/* Footer Section */}
         <Box sx={{ p: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
           {/* Theme Toggle */}
-          <Tooltip title={`Switch to ${mode === 'light' ? 'Dark' : 'Light'} Mode`} arrow>
+          <Tooltip title={t('layout.switchTo')} arrow>
             <ListItemButton 
               onClick={toggleTheme}
               sx={{ 
@@ -404,7 +428,29 @@ export default function Layout() {
                 {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
               </ListItemIcon>
               {!collapsed && (
-                <ListItemText primary={`${mode === 'light' ? 'Dark' : 'Light'} Mode`} />
+                <ListItemText primary={t('layout.themeMode')} />
+              )}
+            </ListItemButton>
+          </Tooltip>
+
+          {/* Language Switcher Button */}
+          <Tooltip title={t('common.language')} arrow>
+            <ListItemButton 
+              onClick={handleLanguageMenuOpen}
+              sx={{ 
+                borderRadius: 2,
+                mb: 1,
+                justifyContent: collapsed ? 'center' : 'flex-start'
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: collapsed ? 'auto' : 40 }}>
+                <TranslateIcon />
+              </ListItemIcon>
+              {!collapsed && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <span role="img" aria-label={currentLang.name}>{currentLang.flag}</span>
+                  <Typography variant="body2">{currentLang.name}</Typography>
+                </Box>
               )}
             </ListItemButton>
           </Tooltip>
@@ -463,18 +509,18 @@ export default function Layout() {
       >
         <MenuItem onClick={() => handleNavigate("/change-password")}>
           <ListItemIcon><LockIcon fontSize="small" color="primary" /></ListItemIcon>
-          <ListItemText primary="Change Password" />
+          <ListItemText primary={t('layout.changePassword')} />
         </MenuItem>
 
         <MenuItem onClick={() => handleNavigate("/settings")}>
           <ListItemIcon><Settings fontSize="small" color="primary" /></ListItemIcon>
-          <ListItemText primary="Settings" />
+          <ListItemText primary={t('layout.settings')} />
         </MenuItem>
 
         {role === "admin" && (
           <MenuItem onClick={() => handleNavigate("/users")}>
             <ListItemIcon><PeopleIcon fontSize="small" color="primary" /></ListItemIcon>
-            <ListItemText primary="User Management" />
+            <ListItemText primary={t('layout.userManagement')} />
           </MenuItem>
         )}
 
@@ -492,8 +538,49 @@ export default function Layout() {
           <ListItemIcon>
             <LogoutIcon fontSize="small" color="error" />
           </ListItemIcon>
-          <ListItemText primary="Logout" />
+          <ListItemText primary={t('layout.logout')} />
         </MenuItem>
+      </Menu>
+
+      {/* Language Selection Menu */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleLanguageMenuClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        PaperProps={{ 
+          elevation: 8, 
+          sx: { 
+            mt: 1.5, 
+            minWidth: 220,
+            borderRadius: 2,
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          } 
+        }}
+      >
+        {languages.map((lang) => (
+          <MenuItem
+            key={lang.code}
+            selected={i18n.language === lang.code}
+            onClick={() => changeLanguage(lang.code)}
+            sx={{
+              fontWeight: i18n.language === lang.code ? 'bold' : 'normal'
+            }}
+          >
+            <ListItemIcon>
+              <span role="img" aria-label={lang.name} style={{ fontSize: '1.2em' }}>
+                {lang.flag}
+              </span>
+            </ListItemIcon>
+            <ListItemText primary={lang.name} />
+            {i18n.language === lang.code && (
+              <ListItemIcon>
+                ✓
+              </ListItemIcon>
+            )}
+          </MenuItem>
+        ))}
       </Menu>
 
       {/* Main Content */}
@@ -514,6 +601,8 @@ export default function Layout() {
       >
         <Toolbar />
         <Outlet />
+        {/* ✅ AI ChatBot rendered inside main content */}
+        <AIChatBot />
       </Box>
     </Box>
   );

@@ -40,12 +40,15 @@ import ReportIcon from '@mui/icons-material/Report';     // For expired
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'; // For near expiry
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ReceiptIcon from '@mui/icons-material/Receipt';
-import AverageIcon from '@mui/icons-material/Calculate';
+import CalculateIcon from '@mui/icons-material/Calculate';
 
 import SalesChart from "../components/charts/SalesChart";
 import TopMedicinesChart from "../components/charts/TopMedicinesChart";
 import InventoryStatusChart from "../components/charts/InventoryStatusChart";
 import DashboardSkeleton from "../components/skeletons/DashboardSkeleton";
+
+// ✅ Add translation hook
+import { useTranslation } from 'react-i18next';
 
 export default function DashboardPage() {
   const [salesData, setSalesData] = useState({
@@ -61,6 +64,9 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const theme = useTheme();
+
+  // ✅ Initialize translation
+  const { t } = useTranslation();
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -116,10 +122,10 @@ export default function DashboardPage() {
         console.log("📦 Low Stock Raw Data:", rawData);
         
         const mapped = rawData.map(item => ({
-          medicineName: item.Medicine?.name || item.medicineName || item.name || "Unknown Medicine",
-          batchNumber: item.batchNumber || item.batch || "N/A",
+          medicineName: item.Medicine?.name || item.medicineName || item.name || t('common.unknownMedicine'),
+          batchNumber: item.batchNumber || item.batch || t('common.na'),
           quantity: item.quantity || item.stock || item.remaining || 0,
-          expiryDate: item.expiryDate || item.expiry || "Unknown"
+          expiryDate: item.expiryDate || item.expiry || t('common.unknown')
         }));
         setLowStockAlerts(mapped);
         hasAnySuccess = true;
@@ -133,10 +139,10 @@ export default function DashboardPage() {
         console.log("⏰ Expiring Soon Raw Data:", rawData);
         
         const mapped = rawData.map(item => ({
-          medicineName: item.Medicine?.name || item.medicineName || item.name || "Unknown Medicine",
-          batchNumber: item.batchNumber || item.batch || "N/A",
+          medicineName: item.Medicine?.name || item.medicineName || item.name || t('common.unknownMedicine'),
+          batchNumber: item.batchNumber || item.batch || t('common.na'),
           quantity: item.quantity || item.stock || 0,
-          expiryDate: item.expiryDate || item.expiry || "Unknown"
+          expiryDate: item.expiryDate || item.expiry || t('common.unknown')
         }));
         setExpiringSoonAlerts(mapped);
         hasAnySuccess = true;
@@ -154,7 +160,7 @@ export default function DashboardPage() {
         const mapped = validData
           .filter(item => item && (item.name || item.medicineName || item.medicine || item.productName))
           .map(item => {
-            const name = item.name || item.medicineName || item.medicine?.name || item.productName || "Unknown Medicine";
+            const name = item.name || item.medicineName || item.medicine?.name || item.productName || t('common.unknownMedicine');
             const quantity = parseInt(
               item.quantity || 
               item.totalQuantity || 
@@ -181,7 +187,7 @@ export default function DashboardPage() {
       // If no API calls succeeded, use fallback data for demonstration
       if (!hasAnySuccess) {
         console.warn("⚠️ Using fallback data for demonstration");
-        setError("Using demo data - API endpoints may need configuration");
+        setError(t('dashboard.demoDataWarning'));
         
         // Fallback demo data
         setSalesData({
@@ -198,22 +204,22 @@ export default function DashboardPage() {
         });
         
         setTopMedicines([
-          { name: 'Paracetamol 500mg', quantity: 156 },
-          { name: 'Amoxicillin 250mg', quantity: 89 },
-          { name: 'Vitamin C 1000mg', quantity: 67 },
-          { name: 'Ibuprofen 400mg', quantity: 54 },
-          { name: 'Aspirin 75mg', quantity: 42 }
+          { name: t('dashboard.paracetamol'), quantity: 156 },
+          { name: t('dashboard.amoxicillin'), quantity: 89 },
+          { name: t('dashboard.vitaminC'), quantity: 67 },
+          { name: t('dashboard.ibuprofen'), quantity: 54 },
+          { name: t('dashboard.aspirin'), quantity: 42 }
         ]);
         
         setLowStockAlerts([
           {
-            medicineName: 'Omeprazole 20mg',
+            medicineName: t('dashboard.omeprazole'),
             batchNumber: 'BATCH202401',
             quantity: 8,
             expiryDate: '2024-12-31'
           },
           {
-            medicineName: 'Metformin 500mg',
+            medicineName: t('dashboard.metformin'),
             batchNumber: 'BATCH202402',
             quantity: 12,
             expiryDate: '2024-11-15'
@@ -222,7 +228,7 @@ export default function DashboardPage() {
         
         setExpiringSoonAlerts([
           {
-            medicineName: 'Loratadine 10mg',
+            medicineName: t('dashboard.loratadine'),
             batchNumber: 'BATCH202312',
             quantity: 25,
             expiryDate: '2024-02-15'
@@ -232,7 +238,7 @@ export default function DashboardPage() {
 
     } catch (err) {
       console.error("💥 Unexpected dashboard error:", err);
-      setError("An unexpected error occurred while loading the dashboard.");
+      setError(t('dashboard.unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -257,7 +263,7 @@ export default function DashboardPage() {
           {error}
         </Alert>
         <Button variant="contained" onClick={fetchDashboardData}>
-          Retry
+          {t('common.retry')}
         </Button>
       </Container>
     );
@@ -266,15 +272,15 @@ export default function DashboardPage() {
   // Prepare inventory chart data
   const inventoryChartData = [
     { 
-      name: "In Stock", 
+      name: t('dashboard.inStock'), 
       value: Math.max(1, topMedicines.reduce((sum, m) => sum + (m.quantity || 0), 0)) 
     },
     { 
-      name: "Low Stock", 
+      name: t('dashboard.lowStock'), 
       value: lowStockAlerts.length 
     },
     { 
-      name: "Expiring Soon", 
+      name: t('dashboard.expiringSoon'), 
       value: expiringSoonAlerts.length 
     },
   ].filter(item => item.value > 0);
@@ -301,10 +307,10 @@ export default function DashboardPage() {
       >
         <StorefrontIcon sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
         <Typography variant="h3" fontWeight="bold" gutterBottom>
-          Pharmacy Dashboard
+          {t('dashboard.title')}
         </Typography>
         <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          Real-time overview of your pharmacy operations
+          {t('dashboard.subtitle')}
         </Typography>
         {error && (
           <Alert severity="info" sx={{ mt: 2, maxWidth: 400, mx: 'auto' }}>
@@ -337,7 +343,7 @@ export default function DashboardPage() {
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
               <AttachMoneyIcon color="primary" sx={{ fontSize: 32, mr: 1 }} />
               <Typography variant="h6" color="textSecondary" fontWeight="medium">
-                Total Sales Today
+                {t('dashboard.totalSalesToday')}
               </Typography>
             </Box>
             <Typography variant="h3" color="primary" fontWeight="bold" sx={{ fontSize: { xs: '2rem', md: '2.5rem' } }}>
@@ -368,7 +374,7 @@ export default function DashboardPage() {
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
               <ReceiptIcon color="secondary" sx={{ fontSize: 32, mr: 1 }} />
               <Typography variant="h6" color="textSecondary" fontWeight="medium">
-                Orders Processed
+                {t('dashboard.ordersProcessed')}
               </Typography>
             </Box>
             <Typography variant="h3" color="secondary" fontWeight="bold" sx={{ fontSize: { xs: '2rem', md: '2.5rem' } }}>
@@ -397,9 +403,9 @@ export default function DashboardPage() {
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-              <AverageIcon color="success" sx={{ fontSize: 32, mr: 1 }} />
+              <CalculateIcon color="success" sx={{ fontSize: 32, mr: 1 }} />
               <Typography variant="h6" color="textSecondary" fontWeight="medium">
-                Avg Order Value
+                {t('dashboard.avgOrderValue')}
               </Typography>
             </Box>
             <Typography variant="h3" color="success.main" fontWeight="bold" sx={{ fontSize: { xs: '2rem', md: '2.5rem' } }}>
@@ -427,7 +433,7 @@ export default function DashboardPage() {
             <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
                 <TrendingUpIcon color="primary" sx={{ fontSize: 28 }} />
-                <Typography variant="h6" fontWeight="bold">Sales Trends</Typography>
+                <Typography variant="h6" fontWeight="bold">{t('dashboard.salesTrends')}</Typography>
               </Box>
               <Box sx={{ height: 280, flex: 1 }}>
                 <SalesChart data={salesData.dailySales || []} />
@@ -452,7 +458,7 @@ export default function DashboardPage() {
             <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
                 <LocalHospitalIcon color="secondary" sx={{ fontSize: 28 }} />
-                <Typography variant="h6" fontWeight="bold">Top Medicines</Typography>
+                <Typography variant="h6" fontWeight="bold">{t('dashboard.topMedicines')}</Typography>
               </Box>
               <Box sx={{ height: 280, flex: 1 }}>
                 <TopMedicinesChart data={topMedicines || []} />
@@ -477,7 +483,7 @@ export default function DashboardPage() {
             <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
                 <InventoryIcon color="warning" sx={{ fontSize: 28 }} />
-                <Typography variant="h6" fontWeight="bold">Inventory Status</Typography>
+                <Typography variant="h6" fontWeight="bold">{t('dashboard.inventoryStatus')}</Typography>
               </Box>
               <Box sx={{ height: 280, flex: 1 }}>
                 <InventoryStatusChart data={inventoryChartData} />
@@ -506,10 +512,10 @@ export default function DashboardPage() {
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <WarningIcon color={lowStockAlerts.length > 0 ? "error" : "disabled"} sx={{ fontSize: 28 }} />
-                <Typography variant="h6" fontWeight="bold">Low Stock Alerts</Typography>
+                <Typography variant="h6" fontWeight="bold">{t('dashboard.lowStockAlerts')}</Typography>
               </Box>
               <Chip
-                label={`${lowStockAlerts.length} items`}
+                label={`${lowStockAlerts.length} ${t('dashboard.items')}`}
                 color={lowStockAlerts.length > 0 ? "error" : "default"}
                 size="medium"
                 sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}
@@ -519,10 +525,10 @@ export default function DashboardPage() {
             {lowStockAlerts.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 4 }}>
                 <Typography color="textSecondary" variant="h6" gutterBottom>
-                  🎉 All Stock Levels Are Healthy
+                  🎉 {t('dashboard.allStockHealthy')}
                 </Typography>
                 <Typography color="textSecondary">
-                  No low stock items detected
+                  {t('dashboard.noLowStock')}
                 </Typography>
               </Box>
             ) : (
@@ -545,7 +551,7 @@ export default function DashboardPage() {
                           {item.medicineName}
                         </Typography>
                       }
-                      secondary={`Batch: ${item.batchNumber} | Remaining: ${item.quantity} units`}
+                      secondary={`${t('dashboard.batch')}: ${item.batchNumber} | ${t('dashboard.remaining')}: ${item.quantity} ${t('dashboard.units')}`}
                     />
                   </ListItem>
                 ))}
@@ -571,10 +577,10 @@ export default function DashboardPage() {
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <AccessTimeIcon color={hasExpired ? "error" : expiringSoonAlerts.length > 0 ? "warning" : "disabled"} sx={{ fontSize: 28 }} />
-                <Typography variant="h6" fontWeight="bold">Expiring Soon</Typography>
+                <Typography variant="h6" fontWeight="bold">{t('dashboard.expiringSoon')}</Typography>
               </Box>
               <Chip
-                label={`${expiringSoonAlerts.length} batches`}
+                label={`${expiringSoonAlerts.length} ${t('dashboard.batches')}`}
                 color={hasExpired ? "error" : expiringSoonAlerts.length > 0 ? "warning" : "default"}
                 size="medium"
                 sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}
@@ -584,10 +590,10 @@ export default function DashboardPage() {
             {expiringSoonAlerts.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 4 }}>
                 <Typography color="textSecondary" variant="h6" gutterBottom>
-                  ✅ No Batches Expiring Soon
+                  ✅ {t('dashboard.noExpiringSoon')}
                 </Typography>
                 <Typography color="textSecondary">
-                  All inventory is within safe expiry dates
+                  {t('dashboard.allInventorySafe')}
                 </Typography>
               </Box>
             ) : (
@@ -643,11 +649,11 @@ export default function DashboardPage() {
                         }
                         secondary={
                           <Typography component="span" variant="body2" color={secondaryColor}>
-                            Batch: {item.batchNumber} | Qty: {item.quantity} | 
-                            Exp: {expiry.toLocaleDateString()} 
+                            {t('dashboard.batch')}: {item.batchNumber} | {t('dashboard.qty')}: {item.quantity} | 
+                            {t('dashboard.exp')}: {expiry.toLocaleDateString()} 
                             {daysDiff < 0 
-                              ? " ⚠️ EXPIRED" 
-                              : ` (${daysDiff} day${daysDiff !== 1 ? 's' : ''} left)`
+                              ? ` ⚠️ ${t('dashboard.expired')}` 
+                              : ` (${daysDiff} ${t('dashboard.dayLeft', { count: daysDiff })})`
                             }
                           </Typography>
                         }
@@ -696,7 +702,7 @@ export default function DashboardPage() {
             minWidth: 200
           }}
         >
-          Create New Order
+          {t('dashboard.createNewOrder')}
         </Button>
         <Button
           variant="contained"
@@ -719,7 +725,7 @@ export default function DashboardPage() {
             minWidth: 200
           }}
         >
-          Fulfill Prescriptions
+          {t('dashboard.fulfillPrescriptions')}
         </Button>
         <Button
           variant="contained"
@@ -742,7 +748,7 @@ export default function DashboardPage() {
             minWidth: 200
           }}
         >
-          Manage Inventory
+          {t('dashboard.manageInventory')}
         </Button>
       </Box>
     </Container>

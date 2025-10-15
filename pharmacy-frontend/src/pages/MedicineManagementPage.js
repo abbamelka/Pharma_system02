@@ -71,6 +71,9 @@ import {
 } from "../services/api";
 import { toast } from "react-toastify";
 
+// ✅ Add translation hook
+import { useTranslation } from 'react-i18next';
+
 export default function MedicineManagementPage() {
   const [medicines, setMedicines] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -87,6 +90,9 @@ export default function MedicineManagementPage() {
   const [currentMedicine, setCurrentMedicine] = useState(null);
 
   const theme = useTheme();
+
+  // ✅ Initialize translation
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -148,8 +154,8 @@ export default function MedicineManagementPage() {
       setError("");
     } catch (err) {
       console.error("Error fetching medicines:", err.response?.data || err.message);
-      setError("Failed to load medicines");
-      toast.error("Could not fetch medicines");
+      setError(t('medicine.failedToLoadMedicines'));
+      toast.error(t('medicine.couldNotFetchMedicines'));
       setMedicines([]);
     } finally {
       setLoading(false);
@@ -163,7 +169,7 @@ export default function MedicineManagementPage() {
       setSuppliers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to load suppliers:", err);
-      toast.warn("Could not load supplier list.");
+      toast.warn(t('medicine.couldNotLoadSuppliers'));
       setSuppliers([]);
     }
   };
@@ -185,19 +191,19 @@ export default function MedicineManagementPage() {
       const results = response?.data?.medicines;
       if (Array.isArray(results)) {
         setMedicines(results);
-        setError(results.length === 0 ? "No medicines match your search." : "");
+        setError(results.length === 0 ? t('medicine.noMedicinesMatchSearch') : "");
       } else {
         setMedicines([]);
-        setError("No medicines found.");
+        setError(t('medicine.noMedicinesFound'));
       }
     } catch (err) {
       console.error("Search failed:", err);
       if (err.response?.status === 401) {
-        setError("Session expired. Please log in again.");
+        setError(t('medicine.sessionExpired'));
         localStorage.removeItem("token");
         setTimeout(() => (window.location.href = "/login"), 1500);
       } else {
-        setError("Failed to search medicines. Please try again.");
+        setError(t('medicine.failedToSearchMedicines'));
       }
       setMedicines([]);
     } finally {
@@ -227,26 +233,26 @@ export default function MedicineManagementPage() {
 
   const handleCreateMedicine = async () => {
     if (!formData.name.trim()) {
-      toast.error("Medicine name is required");
+      toast.error(t('medicine.nameRequired'));
       return;
     }
     if (!formData.price || isNaN(formData.price) || parseFloat(formData.price) <= 0) {
-      toast.error("Valid price is required");
+      toast.error(t('medicine.validPriceRequired'));
       return;
     }
     if (!isValidExpiryDate(formData.expiryDate)) {
-      toast.error("Expiry date must be at least 6 days from today");
+      toast.error(t('medicine.expiryDateValidation'));
       return;
     }
 
     try {
       await createMedicine(formData);
-      toast.success("🎉 Medicine created successfully!");
+      toast.success(t('medicine.createdSuccessfully'));
       fetchMedicines();
       setOpenAddModal(false);
       resetForm();
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to create medicine";
+      const msg = err.response?.data?.message || t('medicine.failedToCreateMedicine');
       console.error("Error creating medicine:", msg);
       toast.error(`❌ ${msg}`);
     }
@@ -254,36 +260,36 @@ export default function MedicineManagementPage() {
 
   const handleUpdateMedicine = async () => {
     if (!formData.name.trim()) {
-      toast.error("Medicine name is required");
+      toast.error(t('medicine.nameRequired'));
       return;
     }
     if (!isValidExpiryDate(formData.expiryDate)) {
-      toast.error("Expiry date must be at least 6 days from today");
+      toast.error(t('medicine.expiryDateValidation'));
       return;
     }
 
     try {
       await updateMedicine(currentMedicine.id, formData);
-      toast.success("✅ Medicine updated successfully!");
+      toast.success(t('medicine.updatedSuccessfully'));
       fetchMedicines();
       setOpenEditModal(false);
       resetForm();
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to update medicine";
+      const msg = err.response?.data?.message || t('medicine.failedToUpdateMedicine');
       console.error("Error updating medicine:", msg);
       toast.error(`❌ ${msg}`);
     }
   };
 
   const handleDeleteMedicine = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this medicine? This action cannot be undone.")) return;
+    if (!window.confirm(t('medicine.confirmDelete'))) return;
 
     try {
       await deleteMedicine(id);
-      toast.success("🗑️ Medicine deleted!");
+      toast.success(t('medicine.deletedSuccessfully'));
       fetchMedicines();
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to delete medicine";
+      const msg = err.response?.data?.message || t('medicine.failedToDeleteMedicine');
       console.error("Error deleting medicine:", msg);
       toast.error(`❌ ${msg}`);
     }
@@ -307,7 +313,7 @@ export default function MedicineManagementPage() {
       });
       setOpenEditModal(true);
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to load medicine details";
+      const msg = err.response?.data?.message || t('medicine.failedToLoadDetails');
       console.error("Error fetching medicine:", msg);
       toast.error(`❌ ${msg}`);
     }
@@ -320,7 +326,7 @@ export default function MedicineManagementPage() {
       setCurrentMedicine(medicine);
       setOpenViewModal(true);
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to load medicine details";
+      const msg = err.response?.data?.message || t('medicine.failedToLoadDetails');
       toast.error(`❌ ${msg}`);
     }
   };
@@ -337,34 +343,34 @@ export default function MedicineManagementPage() {
 
   const handleAddInventory = async () => {
     if (!inventoryData.batchNumber.trim()) {
-      toast.error("Batch number is required");
+      toast.error(t('medicine.batchNumberRequired'));
       return;
     }
     if (!inventoryData.quantity || inventoryData.quantity < 1) {
-      toast.error("Quantity must be at least 1");
+      toast.error(t('medicine.quantityRequired'));
       return;
     }
     if (!inventoryData.expiryDate) {
-      toast.error("Expiry date is required");
+      toast.error(t('medicine.expiryDateRequired'));
       return;
     }
     if (!inventoryData.supplierId) {
-      toast.error("Please select a supplier");
+      toast.error(t('medicine.supplierRequired'));
       return;
     }
     if (!isValidExpiryDate(inventoryData.expiryDate)) {
-      toast.error("Expiry date must be at least 6 days from today");
+      toast.error(t('medicine.expiryDateValidation'));
       return;
     }
 
     try {
       await addInventoryToMedicine(currentMedicine.id, inventoryData);
-      toast.success("📦 Inventory added successfully!");
+      toast.success(t('medicine.inventoryAddedSuccessfully'));
       fetchMedicines();
       setOpenInventoryModal(false);
       resetInventoryForm();
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to add inventory";
+      const msg = err.response?.data?.message || t('medicine.failedToAddInventory');
       console.error("Error adding inventory:", msg);
       toast.error(`❌ ${msg}`);
     }
@@ -436,10 +442,10 @@ export default function MedicineManagementPage() {
       >
         <LocalHospital sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
         <Typography variant="h3" fontWeight="bold" gutterBottom>
-          Medicine Management
+          {t('medicine.medicineManagement')}
         </Typography>
         <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          Manage your pharmacy inventory and medicines
+          {t('medicine.managePharmacyInventory')}
         </Typography>
       </Box>
 
@@ -455,7 +461,7 @@ export default function MedicineManagementPage() {
                 {stats.total}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Total Medicines
+                {t('medicine.totalMedicines')}
               </Typography>
             </CardContent>
           </Card>
@@ -471,7 +477,7 @@ export default function MedicineManagementPage() {
                 {stats.prescription}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Prescription
+                {t('medicine.prescription')}
               </Typography>
             </CardContent>
           </Card>
@@ -487,7 +493,7 @@ export default function MedicineManagementPage() {
                 {stats.otc}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                OTC
+                {t('medicine.otc')}
               </Typography>
             </CardContent>
           </Card>
@@ -503,7 +509,7 @@ export default function MedicineManagementPage() {
                 {stats.supplement}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Supplements
+                {t('medicine.supplements')}
               </Typography>
             </CardContent>
           </Card>
@@ -519,7 +525,7 @@ export default function MedicineManagementPage() {
                 {stats.lowStock}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Low Stock
+                {t('medicine.lowStock')}
               </Typography>
             </CardContent>
           </Card>
@@ -532,12 +538,12 @@ export default function MedicineManagementPage() {
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
-                label="Search Medicines"
+                label={t('medicine.searchMedicines')}
                 fullWidth
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Search by name, barcode, or ID..."
+                placeholder={t('medicine.searchPlaceholder')}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -550,31 +556,31 @@ export default function MedicineManagementPage() {
             
             <Grid item xs={12} md={2}>
               <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
+                <InputLabel>{t('medicine.category')}</InputLabel>
                 <Select
                   value={categoryFilter}
-                  label="Category"
+                  label={t('medicine.category')}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                 >
-                  <MenuItem value="all">All Categories</MenuItem>
-                  <MenuItem value="prescription">Prescription</MenuItem>
-                  <MenuItem value="OTC">OTC</MenuItem>
-                  <MenuItem value="supplement">Supplement</MenuItem>
+                  <MenuItem value="all">{t('medicine.allCategories')}</MenuItem>
+                  <MenuItem value="prescription">{t('medicine.prescription')}</MenuItem>
+                  <MenuItem value="OTC">{t('medicine.otc')}</MenuItem>
+                  <MenuItem value="supplement">{t('medicine.supplement')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             
             <Grid item xs={12} md={2}>
               <FormControl fullWidth>
-                <InputLabel>Type</InputLabel>
+                <InputLabel>{t('medicine.type')}</InputLabel>
                 <Select
                   value={typeFilter}
-                  label="Type"
+                  label={t('medicine.type')}
                   onChange={(e) => setTypeFilter(e.target.value)}
                 >
-                  <MenuItem value="all">All Types</MenuItem>
-                  <MenuItem value="prescription">Rx Only</MenuItem>
-                  <MenuItem value="otc">OTC</MenuItem>
+                  <MenuItem value="all">{t('medicine.allTypes')}</MenuItem>
+                  <MenuItem value="prescription">{t('medicine.rxOnly')}</MenuItem>
+                  <MenuItem value="otc">{t('medicine.otc')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -587,7 +593,7 @@ export default function MedicineManagementPage() {
                   onClick={handleSearch}
                   sx={{ flex: 1 }}
                 >
-                  Search
+                  {t('common.search')}
                 </Button>
                 <Button
                   variant="outlined"
@@ -595,7 +601,7 @@ export default function MedicineManagementPage() {
                   onClick={fetchMedicines}
                   disabled={loading}
                 >
-                  Refresh
+                  {t('common.refresh')}
                 </Button>
                 <Button
                   variant="contained"
@@ -603,7 +609,7 @@ export default function MedicineManagementPage() {
                   startIcon={<Add />}
                   onClick={() => setOpenAddModal(true)}
                 >
-                  New Medicine
+                  {t('medicine.newMedicine')}
                 </Button>
               </Box>
             </Grid>
@@ -628,7 +634,7 @@ export default function MedicineManagementPage() {
       {/* Results Count */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" color="textSecondary">
-          Showing {filteredMedicines.length} of {medicines.length} medicines
+          {t('medicine.showingMedicines', { count: filteredMedicines.length, total: medicines.length })}
         </Typography>
         {(searchTerm || categoryFilter !== 'all' || typeFilter !== 'all') && (
           <Button
@@ -640,7 +646,7 @@ export default function MedicineManagementPage() {
               fetchMedicines();
             }}
           >
-            Clear Filters
+            {t('medicine.clearFilters')}
           </Button>
         )}
       </Box>
@@ -657,15 +663,15 @@ export default function MedicineManagementPage() {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
-              <TableCell><strong>Medicine ID</strong></TableCell>
-              <TableCell><strong>Name & Details</strong></TableCell>
-              <TableCell><strong>Type</strong></TableCell>
-              <TableCell><strong>Category</strong></TableCell>
-              <TableCell align="right"><strong>Price</strong></TableCell>
-              <TableCell><strong>Stock</strong></TableCell>
-              <TableCell><strong>Barcode</strong></TableCell>
-              <TableCell><strong>Expiry</strong></TableCell>
-              <TableCell align="center"><strong>Actions</strong></TableCell>
+              <TableCell><strong>{t('medicine.medicineId')}</strong></TableCell>
+              <TableCell><strong>{t('medicine.nameAndDetails')}</strong></TableCell>
+              <TableCell><strong>{t('medicine.type')}</strong></TableCell>
+              <TableCell><strong>{t('medicine.category')}</strong></TableCell>
+              <TableCell align="right"><strong>{t('medicine.price')}</strong></TableCell>
+              <TableCell><strong>{t('medicine.stock')}</strong></TableCell>
+              <TableCell><strong>{t('medicine.barcode')}</strong></TableCell>
+              <TableCell><strong>{t('medicine.expiry')}</strong></TableCell>
+              <TableCell align="center"><strong>{t('medicine.actions')}</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -674,7 +680,7 @@ export default function MedicineManagementPage() {
                 <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                   <CircularProgress size={60} />
                   <Typography variant="h6" color="textSecondary" sx={{ mt: 2 }}>
-                    Loading medicines...
+                    {t('medicine.loadingMedicines')}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -683,12 +689,12 @@ export default function MedicineManagementPage() {
                 <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                   <MedicalServices sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                   <Typography variant="h6" color="textSecondary" gutterBottom>
-                    No medicines found
+                    {t('medicine.noMedicinesFound')}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
                     {searchTerm || categoryFilter !== 'all' || typeFilter !== 'all' 
-                      ? 'Try adjusting your search or filters' 
-                      : 'No medicines available. Click "New Medicine" to add one.'
+                      ? t('medicine.tryAdjustingSearch') 
+                      : t('medicine.noMedicinesAvailable')
                     }
                   </Typography>
                 </TableCell>
@@ -733,14 +739,14 @@ export default function MedicineManagementPage() {
                     {medicine.requiresPrescription ? (
                       <Chip 
                         icon={<Warning />} 
-                        label="Rx Only" 
+                        label={t('medicine.rxOnly')} 
                         color="error" 
                         size="small" 
                         variant="filled"
                       />
                     ) : (
                       <Chip 
-                        label="OTC" 
+                        label={t('medicine.otc')} 
                         color="success" 
                         size="small" 
                         variant="filled"
@@ -778,7 +784,7 @@ export default function MedicineManagementPage() {
                       </Box>
                     ) : (
                       <Typography variant="caption" color="textSecondary">
-                        N/A
+                        {t('common.na')}
                       </Typography>
                     )}
                   </TableCell>
@@ -792,13 +798,13 @@ export default function MedicineManagementPage() {
                       </Box>
                     ) : (
                       <Typography variant="caption" color="textSecondary">
-                        N/A
+                        {t('common.na')}
                       </Typography>
                     )}
                   </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", gap: 1, justifyContent: 'center' }}>
-                      <Tooltip title="View Details">
+                      <Tooltip title={t('medicine.viewDetails')}>
                         <IconButton
                           color="info"
                           size="small"
@@ -810,7 +816,7 @@ export default function MedicineManagementPage() {
                           <Visibility />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Edit Medicine">
+                      <Tooltip title={t('medicine.editMedicine')}>
                         <IconButton
                           color="primary"
                           size="small"
@@ -822,7 +828,7 @@ export default function MedicineManagementPage() {
                           <Edit />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Add Inventory">
+                      <Tooltip title={t('medicine.addInventory')}>
                         <IconButton
                           color="success"
                           size="small"
@@ -834,7 +840,7 @@ export default function MedicineManagementPage() {
                           <Inventory />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete Medicine">
+                      <Tooltip title={t('medicine.deleteMedicine')}>
                         <IconButton
                           color="error"
                           size="small"
@@ -873,7 +879,7 @@ export default function MedicineManagementPage() {
         }}>
           <Add color="primary" />
           <Typography variant="h6" fontWeight="bold">
-            Create New Medicine
+            {t('medicine.createNewMedicine')}
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
@@ -881,7 +887,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 name="name"
-                label="Medicine Name"
+                label={t('medicine.medicineName')}
                 fullWidth
                 value={formData.name}
                 onChange={handleInputChange}
@@ -898,7 +904,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 name="price"
-                label="Price"
+                label={t('medicine.price')}
                 type="number"
                 fullWidth
                 value={formData.price}
@@ -917,7 +923,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12}>
               <TextField
                 name="description"
-                label="Description"
+                label={t('medicine.description')}
                 fullWidth
                 multiline
                 rows={3}
@@ -934,23 +940,23 @@ export default function MedicineManagementPage() {
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
+                <InputLabel>{t('medicine.category')}</InputLabel>
                 <Select
                   name="category"
                   value={formData.category}
-                  label="Category"
+                  label={t('medicine.category')}
                   onChange={handleInputChange}
                 >
-                  <MenuItem value="prescription">Prescription</MenuItem>
-                  <MenuItem value="OTC">OTC</MenuItem>
-                  <MenuItem value="supplement">Supplement</MenuItem>
+                  <MenuItem value="prescription">{t('medicine.prescription')}</MenuItem>
+                  <MenuItem value="OTC">{t('medicine.otc')}</MenuItem>
+                  <MenuItem value="supplement">{t('medicine.supplement')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 name="barcode"
-                label="Barcode"
+                label={t('medicine.barcode')}
                 fullWidth
                 value={formData.barcode}
                 onChange={handleInputChange}
@@ -966,7 +972,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 name="manufacturer"
-                label="Manufacturer"
+                label={t('medicine.manufacturer')}
                 fullWidth
                 value={formData.manufacturer}
                 onChange={handleInputChange}
@@ -982,7 +988,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 name="expiryDate"
-                label="Default Expiry Date"
+                label={t('medicine.defaultExpiryDate')}
                 type="date"
                 fullWidth
                 InputLabelProps={{ shrink: true }}
@@ -991,7 +997,7 @@ export default function MedicineManagementPage() {
                 error={!isValidExpiryDate(formData.expiryDate) && formData.expiryDate !== ""}
                 helperText={
                   !isValidExpiryDate(formData.expiryDate) && formData.expiryDate !== ""
-                    ? "Expiry date must be at least 6 days from today"
+                    ? t('medicine.expiryDateValidation')
                     : ""
                 }
               />
@@ -1006,7 +1012,7 @@ export default function MedicineManagementPage() {
                     color="primary"
                   />
                 }
-                label="⚠️ This medicine requires a prescription (Rx Only)"
+                label={t('medicine.requiresPrescription')}
                 sx={{ mt: 1 }}
               />
             </Grid>
@@ -1018,7 +1024,7 @@ export default function MedicineManagementPage() {
             variant="outlined"
             startIcon={<ArrowBack />}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button 
             onClick={handleCreateMedicine} 
@@ -1027,7 +1033,7 @@ export default function MedicineManagementPage() {
             startIcon={<CheckCircle />}
             sx={{ px: 4 }}
           >
-            Create Medicine
+            {t('medicine.createMedicine')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1050,7 +1056,7 @@ export default function MedicineManagementPage() {
         }}>
           <Edit color="primary" />
           <Typography variant="h6" fontWeight="bold">
-            Edit Medicine
+            {t('medicine.editMedicine')}
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
@@ -1058,7 +1064,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 name="name"
-                label="Medicine Name"
+                label={t('medicine.medicineName')}
                 fullWidth
                 value={formData.name}
                 onChange={handleInputChange}
@@ -1075,7 +1081,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 name="price"
-                label="Price"
+                label={t('medicine.price')}
                 type="number"
                 fullWidth
                 value={formData.price}
@@ -1094,7 +1100,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12}>
               <TextField
                 name="description"
-                label="Description"
+                label={t('medicine.description')}
                 fullWidth
                 multiline
                 rows={3}
@@ -1111,23 +1117,23 @@ export default function MedicineManagementPage() {
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
+                <InputLabel>{t('medicine.category')}</InputLabel>
                 <Select
                   name="category"
                   value={formData.category}
-                  label="Category"
+                  label={t('medicine.category')}
                   onChange={handleInputChange}
                 >
-                  <MenuItem value="prescription">Prescription</MenuItem>
-                  <MenuItem value="OTC">OTC</MenuItem>
-                  <MenuItem value="supplement">Supplement</MenuItem>
+                  <MenuItem value="prescription">{t('medicine.prescription')}</MenuItem>
+                  <MenuItem value="OTC">{t('medicine.otc')}</MenuItem>
+                  <MenuItem value="supplement">{t('medicine.supplement')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 name="barcode"
-                label="Barcode"
+                label={t('medicine.barcode')}
                 fullWidth
                 value={formData.barcode}
                 onChange={handleInputChange}
@@ -1143,7 +1149,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 name="manufacturer"
-                label="Manufacturer"
+                label={t('medicine.manufacturer')}
                 fullWidth
                 value={formData.manufacturer}
                 onChange={handleInputChange}
@@ -1159,7 +1165,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 name="expiryDate"
-                label="Default Expiry Date"
+                label={t('medicine.defaultExpiryDate')}
                 type="date"
                 fullWidth
                 InputLabelProps={{ shrink: true }}
@@ -1168,7 +1174,7 @@ export default function MedicineManagementPage() {
                 error={!isValidExpiryDate(formData.expiryDate) && formData.expiryDate !== ""}
                 helperText={
                   !isValidExpiryDate(formData.expiryDate) && formData.expiryDate !== ""
-                    ? "Expiry date must be at least 6 days from today"
+                    ? t('medicine.expiryDateValidation')
                     : ""
                 }
               />
@@ -1183,7 +1189,7 @@ export default function MedicineManagementPage() {
                     color="primary"
                   />
                 }
-                label="⚠️ This medicine requires a prescription (Rx Only)"
+                label={t('medicine.requiresPrescription')}
                 sx={{ mt: 1 }}
               />
             </Grid>
@@ -1195,7 +1201,7 @@ export default function MedicineManagementPage() {
             variant="outlined"
             startIcon={<ArrowBack />}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button 
             onClick={handleUpdateMedicine} 
@@ -1204,7 +1210,7 @@ export default function MedicineManagementPage() {
             startIcon={<CheckCircle />}
             sx={{ px: 4 }}
           >
-            Update Medicine
+            {t('medicine.updateMedicine')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1227,18 +1233,21 @@ export default function MedicineManagementPage() {
         }}>
           <Inventory color="success" />
           <Typography variant="h6" fontWeight="bold">
-            Add Inventory to {currentMedicine?.name}
+            {t('medicine.addInventoryTo', { name: currentMedicine?.name })}
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-            Medicine ID: #{currentMedicine?.id} | Barcode: {currentMedicine?.barcode || "N/A"}
+            {t('medicine.medicineIdBarcode', { 
+              id: currentMedicine?.id, 
+              barcode: currentMedicine?.barcode || t('common.na') 
+            })}
           </Typography>
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <TextField
                 name="batchNumber"
-                label="Batch Number"
+                label={t('medicine.batchNumber')}
                 fullWidth
                 value={inventoryData.batchNumber}
                 onChange={handleInventoryInputChange}
@@ -1249,7 +1258,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 name="quantity"
-                label="Quantity"
+                label={t('medicine.quantity')}
                 type="number"
                 fullWidth
                 value={inventoryData.quantity}
@@ -1261,7 +1270,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 name="expiryDate"
-                label="Expiry Date"
+                label={t('medicine.expiryDate')}
                 type="date"
                 fullWidth
                 InputLabelProps={{ shrink: true }}
@@ -1271,7 +1280,7 @@ export default function MedicineManagementPage() {
                 error={!isValidExpiryDate(inventoryData.expiryDate) && inventoryData.expiryDate !== ""}
                 helperText={
                   !isValidExpiryDate(inventoryData.expiryDate) && inventoryData.expiryDate !== ""
-                    ? "Expiry date must be at least 6 days from today"
+                    ? t('medicine.expiryDateValidation')
                     : ""
                 }
               />
@@ -1279,7 +1288,7 @@ export default function MedicineManagementPage() {
             <Grid item xs={12} md={6}>
               <TextField
                 name="purchasePrice"
-                label="Purchase Price"
+                label={t('medicine.purchasePrice')}
                 type="number"
                 fullWidth
                 value={inventoryData.purchasePrice}
@@ -1289,15 +1298,15 @@ export default function MedicineManagementPage() {
             </Grid>
             <Grid item xs={12}>
               <FormControl fullWidth required>
-                <InputLabel>Supplier</InputLabel>
+                <InputLabel>{t('medicine.supplier')}</InputLabel>
                 <Select
                   name="supplierId"
                   value={inventoryData.supplierId}
-                  label="Supplier"
+                  label={t('medicine.supplier')}
                   onChange={handleInventoryInputChange}
                 >
                   {suppliers.length === 0 ? (
-                    <MenuItem disabled>No suppliers found</MenuItem>
+                    <MenuItem disabled>{t('medicine.noSuppliersFound')}</MenuItem>
                   ) : (
                     suppliers.map((sup) => (
                       <MenuItem key={sup.id} value={sup.id}>
@@ -1316,7 +1325,7 @@ export default function MedicineManagementPage() {
             variant="outlined"
             startIcon={<ArrowBack />}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button 
             onClick={handleAddInventory} 
@@ -1325,7 +1334,7 @@ export default function MedicineManagementPage() {
             startIcon={<Inventory />}
             sx={{ px: 4 }}
           >
-            Add Inventory
+            {t('medicine.addInventory')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1348,7 +1357,7 @@ export default function MedicineManagementPage() {
         }}>
           <Visibility color="info" />
           <Typography variant="h6" fontWeight="bold">
-            Medicine Details
+            {t('medicine.medicineDetails')}
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
@@ -1360,7 +1369,7 @@ export default function MedicineManagementPage() {
                 </Typography>
               </Grid>
               <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="textSecondary">Category</Typography>
+                <Typography variant="subtitle2" color="textSecondary">{t('medicine.category')}</Typography>
                 <Chip
                   label={currentMedicine.category.toUpperCase()}
                   color={getCategoryColor(currentMedicine.category)}
@@ -1368,21 +1377,21 @@ export default function MedicineManagementPage() {
                 />
               </Grid>
               <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="textSecondary">Type</Typography>
+                <Typography variant="subtitle2" color="textSecondary">{t('medicine.type')}</Typography>
                 {currentMedicine.requiresPrescription ? (
-                  <Chip icon={<Warning />} label="Rx Only" color="error" size="small" />
+                  <Chip icon={<Warning />} label={t('medicine.rxOnly')} color="error" size="small" />
                 ) : (
-                  <Chip label="OTC" color="success" size="small" />
+                  <Chip label={t('medicine.otc')} color="success" size="small" />
                 )}
               </Grid>
               <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="textSecondary">Price</Typography>
+                <Typography variant="subtitle2" color="textSecondary">{t('medicine.price')}</Typography>
                 <Typography variant="body1" fontWeight="bold">
                   ${parseFloat(currentMedicine.price).toFixed(2)}
                 </Typography>
               </Grid>
               <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="textSecondary">Stock</Typography>
+                <Typography variant="subtitle2" color="textSecondary">{t('medicine.stock')}</Typography>
                 <Chip
                   label={currentMedicine.totalStock || 0}
                   color={getStockColor(currentMedicine.totalStock)}
@@ -1391,19 +1400,19 @@ export default function MedicineManagementPage() {
               </Grid>
               {currentMedicine.barcode && (
                 <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="textSecondary">Barcode</Typography>
+                  <Typography variant="subtitle2" color="textSecondary">{t('medicine.barcode')}</Typography>
                   <Typography variant="body1">{currentMedicine.barcode}</Typography>
                 </Grid>
               )}
               {currentMedicine.manufacturer && (
                 <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="textSecondary">Manufacturer</Typography>
+                  <Typography variant="subtitle2" color="textSecondary">{t('medicine.manufacturer')}</Typography>
                   <Typography variant="body1">{currentMedicine.manufacturer}</Typography>
                 </Grid>
               )}
               {currentMedicine.expiryDate && (
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="textSecondary">Default Expiry Date</Typography>
+                  <Typography variant="subtitle2" color="textSecondary">{t('medicine.defaultExpiryDate')}</Typography>
                   <Typography variant="body1">
                     {new Date(currentMedicine.expiryDate).toLocaleDateString()}
                   </Typography>
@@ -1411,7 +1420,7 @@ export default function MedicineManagementPage() {
               )}
               {currentMedicine.description && (
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="textSecondary">Description</Typography>
+                  <Typography variant="subtitle2" color="textSecondary">{t('medicine.description')}</Typography>
                   <Typography variant="body1">{currentMedicine.description}</Typography>
                 </Grid>
               )}
@@ -1423,7 +1432,7 @@ export default function MedicineManagementPage() {
             onClick={() => setOpenViewModal(false)} 
             variant="contained"
           >
-            Close
+            {t('common.close')}
           </Button>
         </DialogActions>
       </Dialog>

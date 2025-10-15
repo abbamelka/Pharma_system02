@@ -69,6 +69,9 @@ import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import TableSkeleton from "../components/skeletons/TableSkeleton";
 
+// ✅ Add translation hook
+import { useTranslation } from 'react-i18next';
+
 export default function PrescriptionManagementPage() {
   const { user } = useAuth();
   const [prescriptions, setPrescriptions] = useState([]);
@@ -81,6 +84,9 @@ export default function PrescriptionManagementPage() {
   const [stats, setStats] = useState({ total: 0, pending: 0, fulfilled: 0, cancelled: 0 });
 
   const theme = useTheme();
+
+  // ✅ Initialize translation
+  const { t } = useTranslation();
 
   // ✅ State for medicines in prescription
   const [medicines, setMedicines] = useState([{ id: "", medicineId: "", quantity: 1 }]);
@@ -153,7 +159,7 @@ export default function PrescriptionManagementPage() {
             data = res.data?.prescriptions || [];
           } catch (err) {
             if (err.response?.status === 403) {
-              setError("You don't have permission to view pending prescriptions.");
+              setError(t('prescriptionManagement.noPermissionPending'));
             } else {
               throw err;
             }
@@ -162,20 +168,20 @@ export default function PrescriptionManagementPage() {
         }
       } else if (activeTab === 1) {
         if (!/^[+]?[0-9\s\-()]{8,15}$/.test(searchPhone.trim())) {
-          setError("Please enter a valid phone number");
+          setError(t('prescriptionManagement.validPhoneRequired'));
           data = [];
         } else {
           try {
             const res = await getCustomerPrescriptions({ phone: searchPhone.trim() });
             data = res.data?.prescriptions || [];
             if (data.length === 0) {
-              setError("No prescriptions found for this phone number.");
+              setError(t('prescriptionManagement.noPrescriptionsForPhone'));
             }
           } catch (err) {
             if (err.response?.status === 400) {
-              setError("Invalid phone format");
+              setError(t('prescriptionManagement.invalidPhoneFormat'));
             } else {
-              setError("Failed to load prescriptions. Please try again.");
+              setError(t('prescriptionManagement.failedToLoadPrescriptions'));
             }
             data = [];
           }
@@ -190,11 +196,11 @@ export default function PrescriptionManagementPage() {
       setPrescriptions(data);
     } catch (err) {
       console.error("Error fetching prescriptions:", err);
-      setError("Failed to load prescriptions. Please try again.");
+      setError(t('prescriptionManagement.failedToLoadPrescriptions'));
     } finally {
       setLoading(false);
     }
-  }, [activeTab, searchPhone, user, statusFilter]);
+  }, [activeTab, searchPhone, user, statusFilter, t]);
 
   // Auto-fetch when dependencies change
   useEffect(() => {
@@ -230,27 +236,27 @@ export default function PrescriptionManagementPage() {
       .filter(m => m.medicineId)
       .map(m => {
         const med = medicineOptions.find(opt => opt.id === m.medicineId);
-        return `${med?.name || 'Unknown'} x${m.quantity}`;
+        return t('prescriptionManagement.medicineQuantity', { name: med?.name || t('common.unknown'), quantity: m.quantity });
       })
       .join(', ');
   };
 
 const handleCreatePrescription = async () => {
   if (!formData.customerName.trim()) {
-    toast.error("Patient name is required");
+    toast.error(t('prescriptionManagement.patientNameRequired'));
     return;
   }
 
-  const formattedDetails = formatMedicinesForBackend(); // "Paracetamol x2"
+  const formattedDetails = formatMedicinesForBackend();
   if (!formattedDetails.trim()) {
-    toast.error("At least one medicine must be selected");
+    toast.error(t('prescriptionManagement.atLeastOneMedicine'));
     return;
   }
 
   try {
     await createPrescription({
       ...formData,
-      details: formattedDetails, // ← Human-readable
+      details: formattedDetails,
       medicines: medicines
         .filter(m => m.medicineId)
         .map(m => ({
@@ -260,14 +266,14 @@ const handleCreatePrescription = async () => {
       validUntil: formData.validUntil || new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0]
     });
 
-    toast.success("🎉 Prescription created successfully!");
+    toast.success(t('prescriptionManagement.createdSuccessfully'));
     fetchPrescriptions();
     setOpenCreateModal(false);
     resetForm();
     setMedicines([{ id: Date.now(), medicineId: "", quantity: 1 }]);
     setSearchTerm("");
   } catch (err) {
-    const msg = err.response?.data?.message || "Failed to create prescription";
+    const msg = err.response?.data?.message || t('prescriptionManagement.failedToCreate');
     toast.error(`❌ ${msg}`);
   }
 };
@@ -275,23 +281,23 @@ const handleCreatePrescription = async () => {
   const handleFulfillPrescription = async (id) => {
     try {
       await fulfillPrescription(id);
-      toast.success("✅ Prescription fulfilled and order created!");
+      toast.success(t('prescriptionManagement.fulfilledSuccess'));
       fetchPrescriptions();
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to fulfill prescription";
+      const msg = err.response?.data?.message || t('prescriptionManagement.failedToFulfill');
       toast.error(`❌ ${msg}`);
     }
   };
 
   const handleCancelPrescription = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this prescription?")) return;
+    if (!window.confirm(t('prescriptionManagement.confirmCancel'))) return;
 
     try {
       await cancelPrescription(id);
-      toast.success("📝 Prescription cancelled!");
+      toast.success(t('prescriptionManagement.cancelledSuccess'));
       fetchPrescriptions();
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to cancel prescription";
+      const msg = err.response?.data?.message || t('prescriptionManagement.failedToCancel');
       toast.error(`❌ ${msg}`);
     }
   };
@@ -368,14 +374,17 @@ const handleCreatePrescription = async () => {
       >
         <LocalHospital sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
         <Typography variant="h3" fontWeight="bold" gutterBottom>
-          Prescription Management
+          {t('prescriptionManagement.prescriptionManagement')}
         </Typography>
         <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          {user?.role === "doctor" ? "Manage patient prescriptions" : "Process and fulfill prescriptions"}
+          {user?.role === "doctor" 
+            ? t('prescriptionManagement.managePatientPrescriptions') 
+            : t('prescriptionManagement.processAndFulfill')
+          }
         </Typography>
         {user?.role === "doctor" && (
           <Typography variant="body1" sx={{ opacity: 0.8, mt: 1 }}>
-            Create and manage prescriptions for your patients
+            {t('prescriptionManagement.createAndManage')}
           </Typography>
         )}
       </Box>
@@ -392,7 +401,7 @@ const handleCreatePrescription = async () => {
                 {stats.total}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Total Prescriptions
+                {t('prescriptionManagement.totalPrescriptions')}
               </Typography>
             </CardContent>
           </Card>
@@ -408,7 +417,7 @@ const handleCreatePrescription = async () => {
                 {stats.pending}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Pending
+                {t('prescriptionManagement.pending')}
               </Typography>
             </CardContent>
           </Card>
@@ -424,7 +433,7 @@ const handleCreatePrescription = async () => {
                 {stats.fulfilled}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Fulfilled
+                {t('prescriptionManagement.fulfilled')}
               </Typography>
             </CardContent>
           </Card>
@@ -440,7 +449,7 @@ const handleCreatePrescription = async () => {
                 {stats.cancelled}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                Cancelled
+                {t('prescriptionManagement.cancelled')}
               </Typography>
             </CardContent>
           </Card>
@@ -465,7 +474,7 @@ const handleCreatePrescription = async () => {
                     }}
                     sx={{ borderRadius: 2 }}
                   >
-                    Create New Prescription
+                    {t('prescriptionManagement.createNewPrescription')}
                   </Button>
                 )}
                 <Button
@@ -475,7 +484,7 @@ const handleCreatePrescription = async () => {
                   disabled={loading}
                   sx={{ borderRadius: 2 }}
                 >
-                  Refresh
+                  {t('common.refresh')}
                 </Button>
               </Box>
             </Grid>
@@ -483,16 +492,16 @@ const handleCreatePrescription = async () => {
             <Grid item xs={12} md={6}>
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                 <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>Status</InputLabel>
+                  <InputLabel>{t('prescriptionManagement.status')}</InputLabel>
                   <Select
                     value={statusFilter}
-                    label="Status"
+                    label={t('prescriptionManagement.status')}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
-                    <MenuItem value="all">All Status</MenuItem>
-                    <MenuItem value="pending">Pending</MenuItem>
-                    <MenuItem value="fulfilled">Fulfilled</MenuItem>
-                    <MenuItem value="cancelled">Cancelled</MenuItem>
+                    <MenuItem value="all">{t('prescriptionManagement.allStatus')}</MenuItem>
+                    <MenuItem value="pending">{t('prescriptionManagement.pending')}</MenuItem>
+                    <MenuItem value="fulfilled">{t('prescriptionManagement.fulfilled')}</MenuItem>
+                    <MenuItem value="cancelled">{t('prescriptionManagement.cancelled')}</MenuItem>
                   </Select>
                 </FormControl>
               </Box>
@@ -519,12 +528,15 @@ const handleCreatePrescription = async () => {
             <Tab 
               icon={<ReceiptLong />} 
               iconPosition="start"
-              label={user?.role === "doctor" ? "My Prescriptions" : "Pending Prescriptions"} 
+              label={user?.role === "doctor" 
+                ? t('prescriptionManagement.myPrescriptions') 
+                : t('prescriptionManagement.pendingPrescriptions')
+              } 
             />
             <Tab 
               icon={<Search />} 
               iconPosition="start"
-              label="Search by Phone" 
+              label={t('prescriptionManagement.searchByPhone')} 
             />
           </Tabs>
 
@@ -532,16 +544,16 @@ const handleCreatePrescription = async () => {
             <Box sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Phone />
-                Search Patient by Phone Number
+                {t('prescriptionManagement.searchPatientByPhone')}
               </Typography>
               <Grid container spacing={2} alignItems="center">
                 <Grid item xs={12} md={8}>
                   <TextField
-                    label="Phone Number"
+                    label={t('prescriptionManagement.phoneNumber')}
                     fullWidth
                     value={searchPhone}
                     onChange={(e) => setSearchPhone(e.target.value)}
-                    placeholder="e.g., +251912345678"
+                    placeholder={t('prescriptionManagement.examplePhone')}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -556,14 +568,14 @@ const handleCreatePrescription = async () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <CircularProgress size={24} />
                       <Typography variant="body2" color="textSecondary">
-                        Searching...
+                        {t('prescriptionManagement.searching')}
                       </Typography>
                     </Box>
                   )}
                 </Grid>
               </Grid>
               <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                Results update automatically as you type
+                {t('prescriptionManagement.resultsUpdateAutomatically')}
               </Typography>
             </Box>
           )}
@@ -599,14 +611,14 @@ const handleCreatePrescription = async () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
-                <TableCell><strong>Prescription ID</strong></TableCell>
-                <TableCell><strong>Doctor</strong></TableCell>
-                <TableCell><strong>Patient</strong></TableCell>
-                <TableCell><strong>Medication Details</strong></TableCell>
-                <TableCell><strong>Issued Date</strong></TableCell>
-                <TableCell><strong>Valid Until</strong></TableCell>
-                <TableCell><strong>Status</strong></TableCell>
-                <TableCell align="center"><strong>Actions</strong></TableCell>
+                <TableCell><strong>{t('prescriptionManagement.prescriptionId')}</strong></TableCell>
+                <TableCell><strong>{t('prescriptionManagement.doctor')}</strong></TableCell>
+                <TableCell><strong>{t('prescriptionManagement.patient')}</strong></TableCell>
+                <TableCell><strong>{t('prescriptionManagement.medicationDetails')}</strong></TableCell>
+                <TableCell><strong>{t('prescriptionManagement.issuedDate')}</strong></TableCell>
+                <TableCell><strong>{t('prescriptionManagement.validUntil')}</strong></TableCell>
+                <TableCell><strong>{t('prescriptionManagement.status')}</strong></TableCell>
+                <TableCell align="center"><strong>{t('prescriptionManagement.actions')}</strong></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -615,16 +627,16 @@ const handleCreatePrescription = async () => {
                   <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                     <MedicalServices sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                     <Typography variant="h6" color="textSecondary" gutterBottom>
-                      No prescriptions found
+                      {t('prescriptionManagement.noPrescriptionsFound')}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
                       {activeTab === 0
                         ? user?.role === "doctor"
-                          ? "You haven't created any prescriptions yet. Click 'Create New Prescription' to get started."
-                          : "No pending prescriptions available"
+                          ? t('prescriptionManagement.noPrescriptionsCreated')
+                          : t('prescriptionManagement.noPendingPrescriptions')
                         : searchPhone
-                          ? "No prescriptions found for this phone number"
-                          : "Enter a phone number to search for prescriptions"
+                          ? t('prescriptionManagement.noPrescriptionsForPhone')
+                          : t('prescriptionManagement.enterPhoneToSearch')
                       }
                     </Typography>
                     {user?.role === "doctor" && activeTab === 0 && (
@@ -637,7 +649,7 @@ const handleCreatePrescription = async () => {
                         }}
                         sx={{ mt: 2 }}
                       >
-                        Create Your First Prescription
+                        {t('prescriptionManagement.createFirstPrescription')}
                       </Button>
                     )}
                   </TableCell>
@@ -654,17 +666,17 @@ const handleCreatePrescription = async () => {
                   >
                     <TableCell>
                       <Typography fontWeight="bold" color="primary">
-                        #{prescription.id}
+                        {t('prescriptionManagement.prescriptionNumber', { id: prescription.id })}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <VerifiedUser color="action" />
                         <Typography>
-                          {prescription.doctor?.username || "Unknown Doctor"}
+                          {prescription.doctor?.username || t('prescriptionManagement.unknownDoctor')}
                         </Typography>
                         {prescription.doctorId === user?.id && (
-                          <Chip label="You" color="primary" size="small" />
+                          <Chip label={t('prescriptionManagement.you')} color="primary" size="small" />
                         )}
                       </Box>
                     </TableCell>
@@ -673,7 +685,7 @@ const handleCreatePrescription = async () => {
                         <Person color="action" />
                         <Box>
                           <Typography fontWeight="medium">
-                            {prescription.customerName || "Walk-in Patient"}
+                            {prescription.customerName || t('prescriptionManagement.walkInPatient')}
                           </Typography>
                           {prescription.customerPhone && (
                             <Typography variant="caption" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -688,7 +700,7 @@ const handleCreatePrescription = async () => {
                       <Box>
                         {/* ✅ Display human-readable details */}
                         <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 'medium' }}>
-                          {prescription.details || "No medication details"}
+                          {prescription.details || t('prescriptionManagement.noMedicationDetails')}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                           <Chip label={prescription.dosage} size="small" variant="outlined" />
@@ -710,12 +722,12 @@ const handleCreatePrescription = async () => {
                         <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
                         <Box>
                           <Typography variant="body2">
-                            {prescription.validUntil ? new Date(prescription.validUntil).toLocaleDateString() : "N/A"}
+                            {prescription.validUntil ? new Date(prescription.validUntil).toLocaleDateString() : t('common.na')}
                           </Typography>
                           {isPrescriptionExpired(prescription.validUntil) && (
                             <Chip 
                               icon={<Warning />} 
-                              label="Expired" 
+                              label={t('prescriptionManagement.expired')} 
                               color="error" 
                               size="small" 
                               sx={{ mt: 0.5 }}
@@ -737,7 +749,7 @@ const handleCreatePrescription = async () => {
                       <Box sx={{ display: "flex", gap: 1, justifyContent: 'center' }}>
                         {/* FULFILL BUTTON - Pharmacists/Admins only for pending prescriptions */}
                         {prescription.status === "pending" && canFulfillPrescription && (
-                          <Tooltip title="Fulfill Prescription">
+                          <Tooltip title={t('prescriptionManagement.fulfillPrescription')}>
                             <IconButton
                               color="success"
                               size="small"
@@ -753,7 +765,7 @@ const handleCreatePrescription = async () => {
                         
                         {/* CANCEL BUTTON - Available for both doctors and pharmacists */}
                         {prescription.status === "pending" && canCancelPrescription && (
-                          <Tooltip title="Cancel Prescription">
+                          <Tooltip title={t('prescriptionManagement.cancelPrescription')}>
                             <IconButton
                               color="error"
                               size="small"
@@ -768,7 +780,7 @@ const handleCreatePrescription = async () => {
                         )}
                         
                         {/* VIEW BUTTON - Available for all users */}
-                        <Tooltip title="View Details">
+                        <Tooltip title={t('prescriptionManagement.viewDetails')}>
                           <IconButton
                             color="info"
                             size="small"
@@ -808,7 +820,7 @@ const handleCreatePrescription = async () => {
           }}>
             <Add color="primary" />
             <Typography variant="h6" fontWeight="bold">
-              Create New Prescription
+              {t('prescriptionManagement.createNewPrescription')}
             </Typography>
           </DialogTitle>
           
@@ -817,7 +829,7 @@ const handleCreatePrescription = async () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   name="customerName"
-                  label="Patient Name"
+                  label={t('prescriptionManagement.patientName')}
                   fullWidth
                   value={formData.customerName}
                   onChange={handleInputChange}
@@ -835,7 +847,7 @@ const handleCreatePrescription = async () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   name="customerPhone"
-                  label="Phone Number"
+                  label={t('prescriptionManagement.phoneNumber')}
                   fullWidth
                   value={formData.customerPhone}
                   onChange={handleInputChange}
@@ -852,7 +864,7 @@ const handleCreatePrescription = async () => {
               {/* Medicine Selection */}
               <Grid item xs={12}>
                 <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                  Medication List
+                  {t('prescriptionManagement.medicationList')}
                 </Typography>
                 {medicines.map((med) => (
                   <Grid container spacing={2} key={med.id} sx={{ mb: 2, p: 2, border: '1px solid #eee', borderRadius: 2 }}>
@@ -865,16 +877,16 @@ const handleCreatePrescription = async () => {
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            label="Select Medicine"
+                            label={t('prescriptionManagement.selectMedicine')}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Start typing..."
+                            placeholder={t('prescriptionManagement.startTyping')}
                           />
                         )}
                       />
                     </Grid>
                     <Grid item xs={6} md={3}>
                       <TextField
-                        label="Quantity"
+                        label={t('prescriptionManagement.quantity')}
                         type="number"
                         fullWidth
                         inputProps={{ min: 1 }}
@@ -899,47 +911,47 @@ const handleCreatePrescription = async () => {
                   variant="outlined"
                   size="small"
                 >
-                  Add Another Medicine
+                  {t('prescriptionManagement.addAnotherMedicine')}
                 </Button>
               </Grid>
               
               <Grid item xs={12} md={4}>
                 <TextField
                   name="dosage"
-                  label="Dosage"
+                  label={t('prescriptionManagement.dosage')}
                   fullWidth
                   value={formData.dosage}
                   onChange={handleInputChange}
-                  placeholder="e.g., 1 tablet"
+                  placeholder={t('prescriptionManagement.dosagePlaceholder')}
                 />
               </Grid>
               
               <Grid item xs={12} md={4}>
                 <TextField
                   name="frequency"
-                  label="Frequency"
+                  label={t('prescriptionManagement.frequency')}
                   fullWidth
                   value={formData.frequency}
                   onChange={handleInputChange}
-                  placeholder="e.g., twice daily"
+                  placeholder={t('prescriptionManagement.frequencyPlaceholder')}
                 />
               </Grid>
               
               <Grid item xs={12} md={4}>
                 <TextField
                   name="duration"
-                  label="Duration"
+                  label={t('prescriptionManagement.duration')}
                   fullWidth
                   value={formData.duration}
                   onChange={handleInputChange}
-                  placeholder="e.g., 7 days"
+                  placeholder={t('prescriptionManagement.durationPlaceholder')}
                 />
               </Grid>
               
               <Grid item xs={12} md={6}>
                 <TextField
                   name="validUntil"
-                  label="Valid Until"
+                  label={t('prescriptionManagement.validUntil')}
                   type="date"
                   fullWidth
                   InputLabelProps={{ shrink: true }}
@@ -951,13 +963,13 @@ const handleCreatePrescription = async () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   name="instructions"
-                  label="Special Instructions"
+                  label={t('prescriptionManagement.specialInstructions')}
                   fullWidth
                   multiline
                   rows={2}
                   value={formData.instructions}
                   onChange={handleInputChange}
-                  placeholder="Any special instructions for the patient..."
+                  placeholder={t('prescriptionManagement.instructionsPlaceholder')}
                 />
               </Grid>
             </Grid>
@@ -969,7 +981,7 @@ const handleCreatePrescription = async () => {
               variant="outlined"
               startIcon={<ArrowBack />}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button 
               onClick={handleCreatePrescription} 
@@ -978,7 +990,7 @@ const handleCreatePrescription = async () => {
               startIcon={<CheckCircle />}
               sx={{ px: 4 }}
             >
-              Create Prescription
+              {t('prescriptionManagement.createPrescription')}
             </Button>
           </DialogActions>
         </Dialog>

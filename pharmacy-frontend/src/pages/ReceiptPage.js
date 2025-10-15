@@ -43,6 +43,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { generatePDFReceipt } from "../utils/pdfReceiptGenerator";
 
+// ✅ Add translation hook
+import { useTranslation } from 'react-i18next';
+
 export default function ReceiptPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
@@ -51,10 +54,13 @@ export default function ReceiptPage() {
   const [error, setError] = useState("");
   const theme = useTheme();
 
+  // ✅ Initialize translation
+  const { t } = useTranslation();
+
   useEffect(() => {
     const fetchReceipt = async () => {
       if (!orderId) {
-        setError("Order ID missing");
+        setError(t('receipt.orderIdMissing'));
         setLoading(false);
         return;
       }
@@ -67,7 +73,7 @@ export default function ReceiptPage() {
         const receiptData = response.data.receipt;
 
         if (!receiptData || !receiptData.orderId) {
-          throw new Error("Invalid receipt structure");
+          throw new Error(t('receipt.invalidReceiptStructure'));
         }
 
         setReceipt(receiptData);
@@ -75,11 +81,11 @@ export default function ReceiptPage() {
         console.error("Failed to load receipt:", err);
 
         if (err.response?.status === 404) {
-          setError("Receipt not found. Order may not exist.");
+          setError(t('receipt.receiptNotFound'));
         } else if (err.request) {
-          setError("Network error: Unable to reach server");
+          setError(t('receipt.networkError'));
         } else {
-          setError(err.message || "Failed to load receipt");
+          setError(err.message || t('receipt.failedToLoad'));
         }
       } finally {
         setLoading(false);
@@ -87,7 +93,7 @@ export default function ReceiptPage() {
     };
 
     fetchReceipt();
-  }, [orderId]);
+  }, [orderId, t]);
 
   const handleDownloadPDF = () => {
     if (!receipt) return;
@@ -95,10 +101,10 @@ export default function ReceiptPage() {
     try {
       const pdf = generatePDFReceipt(receipt);
       pdf.save(`receipt-${receipt.receiptId}.pdf`);
-      toast.success("📄 Receipt downloaded successfully!");
+      toast.success(t('receipt.downloadSuccess'));
     } catch (err) {
       console.error("Error generating PDF:", err);
-      toast.error("Failed to generate PDF receipt");
+      toast.error(t('receipt.pdfGenerationFailed'));
     }
   };
 
@@ -110,16 +116,16 @@ export default function ReceiptPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Receipt ${receipt.receiptId}`,
-          text: `Pharmacy receipt for order ${receipt.orderId}`,
+          title: t('receipt.shareTitle', { receiptId: receipt.receiptId }),
+          text: t('receipt.shareText', { orderId: receipt.orderId }),
           url: window.location.href,
         });
-        toast.success("Receipt shared successfully!");
+        toast.success(t('receipt.shareSuccess'));
       } catch (err) {
         console.error('Error sharing:', err);
       }
     } else {
-      toast.info("Web Share API not supported in your browser");
+      toast.info(t('receipt.shareNotSupported'));
     }
   };
 
@@ -137,7 +143,7 @@ export default function ReceiptPage() {
       >
         <CircularProgress size={60} />
         <Typography variant="h6" color="textSecondary">
-          Generating your receipt...
+          {t('receipt.generatingReceipt')}
         </Typography>
       </Box>
     );
@@ -163,14 +169,14 @@ export default function ReceiptPage() {
             onClick={() => navigate("/orders/create")}
             startIcon={<ReceiptLong />}
           >
-            Create New Order
+            {t('receipt.createNewOrder')}
           </Button>
           <Button 
             variant="outlined" 
             onClick={() => navigate("/dashboard")}
             startIcon={<ArrowBack />}
           >
-            Back to Dashboard
+            {t('receipt.backToDashboard')}
           </Button>
         </Box>
       </Container>
@@ -181,14 +187,14 @@ export default function ReceiptPage() {
     return (
       <Container maxWidth="md" sx={{ mt: 4 }}>
         <Alert severity="warning">
-          No receipt data available
+          {t('receipt.noReceiptData')}
         </Alert>
         <Button 
           onClick={() => navigate("/orders/create")} 
           sx={{ mt: 2 }}
           startIcon={<ReceiptLong />}
         >
-          Create New Order
+          {t('receipt.createNewOrder')}
         </Button>
       </Container>
     );
@@ -203,7 +209,7 @@ export default function ReceiptPage() {
           onClick={() => navigate("/dashboard")}
           sx={{ mb: 2 }}
         >
-          Back to Dashboard
+          {t('receipt.backToDashboard')}
         </Button>
         
         <Box 
@@ -220,10 +226,10 @@ export default function ReceiptPage() {
         >
           <Verified sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
           <Typography variant="h3" fontWeight="bold" gutterBottom>
-            Order Complete!
+            {t('receipt.orderComplete')}
           </Typography>
           <Typography variant="h6" sx={{ opacity: 0.9 }}>
-            Thank you for your purchase
+            {t('receipt.thankYouPurchase')}
           </Typography>
         </Box>
       </Box>
@@ -267,15 +273,15 @@ export default function ReceiptPage() {
                 <Card variant="outlined" sx={{ p: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <ReceiptLong color="primary" />
-                    <Typography variant="h6">Receipt Details</Typography>
+                    <Typography variant="h6">{t('receipt.receiptDetails')}</Typography>
                   </Box>
-                  <Typography><strong>Receipt ID:</strong> {receipt.receiptId}</Typography>
-                  <Typography><strong>Order ID:</strong> {receipt.orderId}</Typography>
+                  <Typography><strong>{t('receipt.receiptId')}:</strong> {receipt.receiptId}</Typography>
+                  <Typography><strong>{t('receipt.orderId')}:</strong> {receipt.orderId}</Typography>
                   <Typography>
-                    <strong>Date:</strong> {new Date(receipt.date).toLocaleDateString()}
+                    <strong>{t('receipt.date')}:</strong> {new Date(receipt.date).toLocaleDateString()}
                   </Typography>
                   <Typography>
-                    <strong>Time:</strong> {new Date(receipt.date).toLocaleTimeString()}
+                    <strong>{t('receipt.time')}:</strong> {new Date(receipt.date).toLocaleTimeString()}
                   </Typography>
                 </Card>
               </Grid>
@@ -284,12 +290,12 @@ export default function ReceiptPage() {
                 <Card variant="outlined" sx={{ p: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Person color="secondary" />
-                    <Typography variant="h6">Customer Info</Typography>
+                    <Typography variant="h6">{t('receipt.customerInfo')}</Typography>
                   </Box>
-                  <Typography><strong>Name:</strong> {receipt.customer.name}</Typography>
-                  <Typography><strong>ID:</strong> {receipt.customer.id}</Typography>
+                  <Typography><strong>{t('receipt.name')}:</strong> {receipt.customer.name}</Typography>
+                  <Typography><strong>{t('receipt.id')}:</strong> {receipt.customer.id}</Typography>
                   {receipt.customer.phone && (
-                    <Typography><strong>Phone:</strong> {receipt.customer.phone}</Typography>
+                    <Typography><strong>{t('receipt.phone')}:</strong> {receipt.customer.phone}</Typography>
                   )}
                 </Card>
               </Grid>
@@ -298,10 +304,10 @@ export default function ReceiptPage() {
             {/* Cashier Info */}
             <Box sx={{ mb: 3, p: 2, bgcolor: alpha(theme.palette.info.main, 0.05), borderRadius: 2 }}>
               <Typography variant="subtitle1" gutterBottom>
-                <strong>Served by:</strong> {receipt.cashier.name}
+                <strong>{t('receipt.servedBy')}:</strong> {receipt.cashier.name}
               </Typography>
               <Chip 
-                label={`Status: ${receipt.status}`} 
+                label={t('receipt.status', { status: receipt.status })} 
                 color={receipt.status === 'completed' ? 'success' : 'warning'}
                 size="small"
               />
@@ -310,7 +316,7 @@ export default function ReceiptPage() {
             {/* Items Table */}
             <Typography variant="h6" gutterBottom sx={{ mt: 4, display: 'flex', alignItems: 'center', gap: 1 }}>
               <MedicalServices />
-              Order Items
+              {t('receipt.orderItems')}
             </Typography>
             
             <TableContainer 
@@ -321,10 +327,10 @@ export default function ReceiptPage() {
               <Table>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
-                    <TableCell><strong>Medicine</strong></TableCell>
-                    <TableCell align="center"><strong>Qty</strong></TableCell>
-                    <TableCell align="right"><strong>Unit Price</strong></TableCell>
-                    <TableCell align="right"><strong>Total</strong></TableCell>
+                    <TableCell><strong>{t('receipt.medicine')}</strong></TableCell>
+                    <TableCell align="center"><strong>{t('receipt.quantity')}</strong></TableCell>
+                    <TableCell align="right"><strong>{t('receipt.unitPrice')}</strong></TableCell>
+                    <TableCell align="right"><strong>{t('receipt.total')}</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -372,17 +378,17 @@ export default function ReceiptPage() {
               }}
             >
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography>Subtotal:</Typography>
+                <Typography>{t('receipt.subtotal')}:</Typography>
                 <Typography>${parseFloat(receipt.subtotal).toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography>Tax ({receipt.taxRate || 15}%):</Typography>
+                <Typography>{t('receipt.tax', { rate: receipt.taxRate || 15 })}:</Typography>
                 <Typography>${parseFloat(receipt.tax).toFixed(2)}</Typography>
               </Box>
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="h5" fontWeight="bold">
-                  TOTAL:
+                  {t('receipt.total')}:
                 </Typography>
                 <Typography variant="h5" color="success.main" fontWeight="bold">
                   ${parseFloat(receipt.total).toFixed(2)}
@@ -402,12 +408,12 @@ export default function ReceiptPage() {
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <Verified color="warning" />
-                  <Typography variant="h6">Prescription Information</Typography>
+                  <Typography variant="h6">{t('receipt.prescriptionInformation')}</Typography>
                 </Box>
-                <Typography><strong>Prescription ID:</strong> {receipt.prescription.id}</Typography>
-                <Typography><strong>Details:</strong> {receipt.prescription.details}</Typography>
+                <Typography><strong>{t('receipt.prescriptionId')}:</strong> {receipt.prescription.id}</Typography>
+                <Typography><strong>{t('receipt.details')}:</strong> {receipt.prescription.details}</Typography>
                 {receipt.prescription.doctor && (
-                  <Typography><strong>Prescribing Doctor:</strong> {receipt.prescription.doctor}</Typography>
+                  <Typography><strong>{t('receipt.prescribingDoctor')}:</strong> {receipt.prescription.doctor}</Typography>
                 )}
               </Card>
             )}
@@ -415,13 +421,13 @@ export default function ReceiptPage() {
             {/* Footer */}
             <Box sx={{ textAlign: 'center', mt: 4, pt: 3, borderTop: `1px dashed ${theme.palette.divider}` }}>
               <Typography variant="body2" color="textSecondary" gutterBottom>
-                Thank you for choosing {receipt.pharmacy.name}
+                {t('receipt.thankYouMessage', { pharmacyName: receipt.pharmacy.name })}
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                For questions or concerns, please contact us at {receipt.pharmacy.phone}
+                {t('receipt.contactMessage', { phone: receipt.pharmacy.phone })}
               </Typography>
               <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-                Receipt generated on {new Date().toLocaleString()}
+                {t('receipt.generatedOn', { date: new Date().toLocaleString() })}
               </Typography>
             </Box>
           </Paper>
@@ -433,7 +439,7 @@ export default function ReceiptPage() {
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Download />
-                Receipt Actions
+                {t('receipt.receiptActions')}
               </Typography>
               
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -445,7 +451,7 @@ export default function ReceiptPage() {
                   size="large"
                   sx={{ justifyContent: 'flex-start' }}
                 >
-                  Download PDF
+                  {t('receipt.downloadPDF')}
                 </Button>
                 
                 <Button
@@ -455,7 +461,7 @@ export default function ReceiptPage() {
                   size="large"
                   sx={{ justifyContent: 'flex-start' }}
                 >
-                  Print Receipt
+                  {t('receipt.printReceipt')}
                 </Button>
                 
                 <Button
@@ -465,7 +471,7 @@ export default function ReceiptPage() {
                   size="large"
                   sx={{ justifyContent: 'flex-start' }}
                 >
-                  Share Receipt
+                  {t('receipt.shareReceipt')}
                 </Button>
                 
                 <Button
@@ -473,9 +479,9 @@ export default function ReceiptPage() {
                   startIcon={<Email />}
                   size="large"
                   sx={{ justifyContent: 'flex-start' }}
-                  onClick={() => toast.info("Email feature coming soon!")}
+                  onClick={() => toast.info(t('receipt.emailComingSoon'))}
                 >
-                  Email Receipt
+                  {t('receipt.emailReceipt')}
                 </Button>
               </Box>
 
@@ -483,7 +489,7 @@ export default function ReceiptPage() {
 
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <ReceiptLong />
-                Quick Actions
+                {t('receipt.quickActions')}
               </Typography>
               
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -494,7 +500,7 @@ export default function ReceiptPage() {
                   size="large"
                   sx={{ justifyContent: 'flex-start' }}
                 >
-                  Create New Order
+                  {t('receipt.createNewOrder')}
                 </Button>
                 
                 <Button
@@ -503,7 +509,7 @@ export default function ReceiptPage() {
                   size="large"
                   sx={{ justifyContent: 'flex-start' }}
                 >
-                  Back to Dashboard
+                  {t('receipt.backToDashboard')}
                 </Button>
               </Box>
             </CardContent>
@@ -513,23 +519,23 @@ export default function ReceiptPage() {
           <Card sx={{ mt: 3, borderRadius: 3 }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
-                Order Summary
+                {t('receipt.orderSummary')}
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Items:</Typography>
+                <Typography variant="body2">{t('receipt.items')}:</Typography>
                 <Typography variant="body2">{receipt.items.length}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Subtotal:</Typography>
+                <Typography variant="body2">{t('receipt.subtotal')}:</Typography>
                 <Typography variant="body2">${parseFloat(receipt.subtotal).toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Tax:</Typography>
+                <Typography variant="body2">{t('receipt.tax')}:</Typography>
                 <Typography variant="body2">${parseFloat(receipt.tax).toFixed(2)}</Typography>
               </Box>
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="h6">Total:</Typography>
+                <Typography variant="h6">{t('receipt.total')}:</Typography>
                 <Typography variant="h6" color="success.main">
                   ${parseFloat(receipt.total).toFixed(2)}
                 </Typography>
