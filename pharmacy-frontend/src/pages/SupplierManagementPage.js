@@ -34,6 +34,7 @@ import {
   alpha,
   useTheme,
   Divider,
+  TablePagination, // ✅ Added import
 } from "@mui/material";
 import {
   Add,
@@ -80,6 +81,10 @@ export default function SupplierManagementPage() {
   // ✅ Initialize translation
   const { t } = useTranslation();
 
+  // ✅ Pagination state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -95,6 +100,21 @@ export default function SupplierManagementPage() {
     hasContact: 0,
     hasAddress: 0,
   });
+
+  // ✅ Move getSupplierStatus function to the top
+  const getSupplierStatus = (supplier) => {
+    // Simple status based on data completeness
+    const completeness = [
+      supplier.email,
+      supplier.phone,
+      supplier.address,
+      supplier.contact
+    ].filter(Boolean).length;
+
+    if (completeness >= 3) return { color: 'success', label: t('supplier.complete') };
+    if (completeness >= 2) return { color: 'warning', label: t('supplier.partial') };
+    return { color: 'error', label: t('supplier.incomplete') };
+  };
 
   const fetchSuppliers = async () => {
     try {
@@ -215,6 +235,40 @@ export default function SupplierManagementPage() {
     }
   };
 
+  // Filter suppliers based on status
+  const filteredSuppliers = suppliers.filter(supplier => {
+    const status = getSupplierStatus(supplier);
+    
+    if (statusFilter === "all") return true;
+    if (statusFilter === "complete") return status.color === 'success';
+    if (statusFilter === "partial") return status.color === 'warning';
+    if (statusFilter === "incomplete") return status.color === 'error';
+    
+    return true;
+  });
+
+  // ✅ Reset pagination when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [filteredSuppliers]);
+
+  // ✅ Change page handler
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  // ✅ Change rows per page handler
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // ✅ Paginated list
+  const paginatedSuppliers = filteredSuppliers.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   const resetForm = () => {
     setFormData({
       name: "",
@@ -230,20 +284,6 @@ export default function SupplierManagementPage() {
       ...formData,
       [e.target.name]: e.target.value
     });
-  };
-
-  const getSupplierStatus = (supplier) => {
-    // Simple status based on data completeness
-    const completeness = [
-      supplier.email,
-      supplier.phone,
-      supplier.address,
-      supplier.contact
-    ].filter(Boolean).length;
-
-    if (completeness >= 3) return { color: 'success', label: t('supplier.complete') };
-    if (completeness >= 2) return { color: 'warning', label: t('supplier.partial') };
-    return { color: 'error', label: t('supplier.incomplete') };
   };
 
   if (loading) {
@@ -455,17 +495,18 @@ export default function SupplierManagementPage() {
       {/* Results Count */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" color="textSecondary">
-          {t('supplier.showingSuppliers', { count: suppliers.length })}
+          {t('supplier.showingSuppliers', { count: filteredSuppliers.length, total: suppliers.length })}
         </Typography>
-        {searchTerm && (
+        {(searchTerm || statusFilter !== 'all') && (
           <Button
             color="secondary"
             onClick={() => {
               setSearchTerm("");
+              setStatusFilter("all");
               fetchSuppliers();
             }}
           >
-            {t('supplier.clearSearch')}
+            {t('supplier.clearFilters')}
           </Button>
         )}
       </Box>
@@ -490,7 +531,7 @@ export default function SupplierManagementPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {suppliers.length === 0 ? (
+            {paginatedSuppliers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                   <Business sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
@@ -498,7 +539,7 @@ export default function SupplierManagementPage() {
                     {t('supplier.noSuppliersFound')}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {searchTerm 
+                    {searchTerm || statusFilter !== 'all'
                       ? t('supplier.tryAdjustingSearch') 
                       : t('supplier.createFirstSupplier')
                     }
@@ -506,7 +547,7 @@ export default function SupplierManagementPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              suppliers.map((supplier) => {
+              paginatedSuppliers.map((supplier) => {
                 const status = getSupplierStatus(supplier);
 
                 return (
@@ -618,6 +659,21 @@ export default function SupplierManagementPage() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* ✅ Pagination */}
+      <TablePagination
+        component="div"
+        count={filteredSuppliers.length}
+        page={page}
+        onPageChange={handleChangePage}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        rowsPerPageOptions={[5, 10, 25, 50]}
+        labelRowsPerPage={t('common.rowsPerPage')}
+        labelDisplayedRows={({ from, to, count }) =>
+          t('common.displayedRows', { from, to, count })
+        }
+      />
 
       {/* Enhanced Modals */}
       <EnhancedSupplierModal

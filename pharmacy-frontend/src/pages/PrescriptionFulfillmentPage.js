@@ -26,6 +26,7 @@ import {
   useTheme,
   Divider,
   IconButton,
+  TablePagination, // ✅ Added import
 } from "@mui/material";
 import {
   LocalPharmacy,
@@ -62,6 +63,10 @@ export default function PrescriptionFulfillmentPage() {
 
   // ✅ Initialize translation
   const { t } = useTranslation();
+
+  // ✅ Pagination state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const fetchPrescriptions = async () => {
     setLoading(true);
@@ -158,6 +163,28 @@ export default function PrescriptionFulfillmentPage() {
 
     return matchesSearch && matchesStatus;
   });
+
+  // ✅ Reset pagination when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [filteredPrescriptions]);
+
+  // ✅ Change page handler
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  // ✅ Change rows per page handler
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // ✅ Paginated list
+  const paginatedPrescriptions = filteredPrescriptions.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -378,7 +405,7 @@ export default function PrescriptionFulfillmentPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredPrescriptions.length === 0 ? (
+            {paginatedPrescriptions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                   <LocalPharmacy sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
@@ -394,7 +421,7 @@ export default function PrescriptionFulfillmentPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredPrescriptions.map((prescription) => (
+              paginatedPrescriptions.map((prescription) => (
                 <TableRow
                   key={prescription.id}
                   sx={{
@@ -526,6 +553,21 @@ export default function PrescriptionFulfillmentPage() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* ✅ Pagination */}
+      <TablePagination
+        component="div"
+        count={filteredPrescriptions.length}
+        page={page}
+        onPageChange={handleChangePage}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        rowsPerPageOptions={[5, 10, 25, 50]}
+        labelRowsPerPage={t('common.rowsPerPage')}
+        labelDisplayedRows={({ from, to, count }) =>
+          t('common.displayedRows', { from, to, count })
+        }
+      />
     </Container>
   );
 }

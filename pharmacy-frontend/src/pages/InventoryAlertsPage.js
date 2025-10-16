@@ -26,6 +26,7 @@ import {
   useTheme,
   Badge,
   IconButton,
+  TablePagination, // ✅ Added import
 } from "@mui/material";
 import {
   Warning,
@@ -60,6 +61,12 @@ export default function InventoryAlertsPage() {
 
   // ✅ Initialize translation
   const { t } = useTranslation();
+
+  // ✅ Pagination state for each tab
+  const [lowStockPage, setLowStockPage] = useState(0);
+  const [expiringSoonPage, setExpiringSoonPage] = useState(0);
+  const [expiredPage, setExpiredPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const fetchAlerts = async () => {
     setLoading(true);
@@ -138,7 +145,52 @@ export default function InventoryAlertsPage() {
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+    // ✅ Reset pagination when switching tabs
+    setLowStockPage(0);
+    setExpiringSoonPage(0);
+    setExpiredPage(0);
   };
+
+  // ✅ Pagination handlers
+  const handleChangePage = (event, newPage, type) => {
+    switch (type) {
+      case 'lowStock':
+        setLowStockPage(newPage);
+        break;
+      case 'expiringSoon':
+        setExpiringSoonPage(newPage);
+        break;
+      case 'expired':
+        setExpiredPage(newPage);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    // ✅ Reset all pagination to first page
+    setLowStockPage(0);
+    setExpiringSoonPage(0);
+    setExpiredPage(0);
+  };
+
+  // ✅ Paginated data for each tab
+  const paginatedLowStock = lowStockAlerts.slice(
+    lowStockPage * rowsPerPage,
+    lowStockPage * rowsPerPage + rowsPerPage
+  );
+
+  const paginatedExpiringSoon = expiringSoonAlerts.slice(
+    expiringSoonPage * rowsPerPage,
+    expiringSoonPage * rowsPerPage + rowsPerPage
+  );
+
+  const paginatedExpired = expiredBatches.slice(
+    expiredPage * rowsPerPage,
+    expiredPage * rowsPerPage + rowsPerPage
+  );
 
   // Statistics
   const totalAlerts = lowStockAlerts.length + expiringSoonAlerts.length + expiredBatches.length;
@@ -383,83 +435,100 @@ export default function InventoryAlertsPage() {
                   </Typography>
                 </Box>
               ) : (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: alpha(theme.palette.error.main, 0.04) }}>
-                        <TableCell><strong>{t('alerts.medicine')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.batch')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.category')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.currentStock')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.expiryDate')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.supplier')}</strong></TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {lowStockAlerts.map((item, idx) => (
-                        <TableRow 
-                          key={idx}
-                          sx={{ 
-                            '&:hover': { 
-                              backgroundColor: alpha(theme.palette.error.main, 0.02) 
-                            } 
-                          }}
-                        >
-                          <TableCell>
-                            <Box>
-                              <Typography fontWeight="medium">
-                                {item.medicineName}
-                              </Typography>
-                              <Typography variant="caption" color="textSecondary">
-                                {t('alerts.idNumber', { id: item.medicineId })}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <QrCode sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="body2">
-                                {item.batchNumber}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={item.category?.toUpperCase() || t('common.na')}
-                              color={getCategoryColor(item.category)}
-                              size="small"
-                              variant="outlined"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={t('alerts.units', { quantity: item.currentStock })}
-                              color={getStockColor(item.currentStock)}
-                              size="small"
-                              variant="filled"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="body2">
-                                {new Date(item.expiryDate).toLocaleDateString()}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <Business sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="body2">
-                                {item.supplierName}
-                              </Typography>
-                            </Box>
-                          </TableCell>
+                <>
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow sx={{ backgroundColor: alpha(theme.palette.error.main, 0.04) }}>
+                          <TableCell><strong>{t('alerts.medicine')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.batch')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.category')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.currentStock')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.expiryDate')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.supplier')}</strong></TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      </TableHead>
+                      <TableBody>
+                        {paginatedLowStock.map((item, idx) => (
+                          <TableRow 
+                            key={idx}
+                            sx={{ 
+                              '&:hover': { 
+                                backgroundColor: alpha(theme.palette.error.main, 0.02) 
+                              } 
+                            }}
+                          >
+                            <TableCell>
+                              <Box>
+                                <Typography fontWeight="medium">
+                                  {item.medicineName}
+                                </Typography>
+                                <Typography variant="caption" color="textSecondary">
+                                  {t('alerts.idNumber', { id: item.medicineId })}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <QrCode sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                <Typography variant="body2">
+                                  {item.batchNumber}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={item.category?.toUpperCase() || t('common.na')}
+                                color={getCategoryColor(item.category)}
+                                size="small"
+                                variant="outlined"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={t('alerts.units', { quantity: item.currentStock })}
+                                color={getStockColor(item.currentStock)}
+                                size="small"
+                                variant="filled"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                <Typography variant="body2">
+                                  {new Date(item.expiryDate).toLocaleDateString()}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Business sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                <Typography variant="body2">
+                                  {item.supplierName}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  
+                  {/* ✅ Low Stock Pagination */}
+                  <TablePagination
+                    component="div"
+                    count={lowStockAlerts.length}
+                    page={lowStockPage}
+                    onPageChange={(event, newPage) => handleChangePage(event, newPage, 'lowStock')}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    rowsPerPageOptions={[5, 10, 25, 50]}
+                    labelRowsPerPage={t('common.rowsPerPage')}
+                    labelDisplayedRows={({ from, to, count }) =>
+                      t('common.displayedRows', { from, to, count })
+                    }
+                  />
+                </>
               )}
             </Box>
           )}
@@ -490,84 +559,101 @@ export default function InventoryAlertsPage() {
                   </Typography>
                 </Box>
               ) : (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: alpha(theme.palette.warning.main, 0.04) }}>
-                        <TableCell><strong>{t('alerts.medicine')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.batch')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.category')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.stock')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.expiryStatus')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.supplier')}</strong></TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {expiringSoonAlerts.map((item, idx) => {
-                        const expiryStatus = getExpiryStatus(item.expiryDate);
-                        return (
-                          <TableRow 
-                            key={idx}
-                            sx={{ 
-                              '&:hover': { 
-                                backgroundColor: alpha(theme.palette.warning.main, 0.02) 
-                              } 
-                            }}
-                          >
-                            <TableCell>
-                              <Typography fontWeight="medium">
-                                {item.medicineName}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <QrCode sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                <Typography variant="body2">
-                                  {item.batchNumber}
+                <>
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow sx={{ backgroundColor: alpha(theme.palette.warning.main, 0.04) }}>
+                          <TableCell><strong>{t('alerts.medicine')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.batch')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.category')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.stock')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.expiryStatus')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.supplier')}</strong></TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {paginatedExpiringSoon.map((item, idx) => {
+                          const expiryStatus = getExpiryStatus(item.expiryDate);
+                          return (
+                            <TableRow 
+                              key={idx}
+                              sx={{ 
+                                '&:hover': { 
+                                  backgroundColor: alpha(theme.palette.warning.main, 0.02) 
+                                } 
+                              }}
+                            >
+                              <TableCell>
+                                <Typography fontWeight="medium">
+                                  {item.medicineName}
                                 </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                label={item.category?.toUpperCase() || t('common.na')}
-                                color={getCategoryColor(item.category)}
-                                size="small"
-                                variant="outlined"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                label={t('alerts.units', { quantity: item.currentStock })}
-                                color="default"
-                                size="small"
-                                variant="outlined"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Tooltip title={t('alerts.expiresOn', { date: new Date(item.expiryDate).toLocaleDateString() })}>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <QrCode sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                  <Typography variant="body2">
+                                    {item.batchNumber}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
                                 <Chip
-                                  icon={expiryStatus.icon}
-                                  label={expiryStatus.label}
-                                  color={expiryStatus.color}
+                                  label={item.category?.toUpperCase() || t('common.na')}
+                                  color={getCategoryColor(item.category)}
                                   size="small"
-                                  variant="filled"
+                                  variant="outlined"
                                 />
-                              </Tooltip>
-                            </TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Business sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                <Typography variant="body2">
-                                  {item.supplierName}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={t('alerts.units', { quantity: item.currentStock })}
+                                  color="default"
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Tooltip title={t('alerts.expiresOn', { date: new Date(item.expiryDate).toLocaleDateString() })}>
+                                  <Chip
+                                    icon={expiryStatus.icon}
+                                    label={expiryStatus.label}
+                                    color={expiryStatus.color}
+                                    size="small"
+                                    variant="filled"
+                                  />
+                                </Tooltip>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Business sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                  <Typography variant="body2">
+                                    {item.supplierName}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  
+                  {/* ✅ Expiring Soon Pagination */}
+                  <TablePagination
+                    component="div"
+                    count={expiringSoonAlerts.length}
+                    page={expiringSoonPage}
+                    onPageChange={(event, newPage) => handleChangePage(event, newPage, 'expiringSoon')}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    rowsPerPageOptions={[5, 10, 25, 50]}
+                    labelRowsPerPage={t('common.rowsPerPage')}
+                    labelDisplayedRows={({ from, to, count }) =>
+                      t('common.displayedRows', { from, to, count })
+                    }
+                  />
+                </>
               )}
             </Box>
           )}
@@ -598,78 +684,95 @@ export default function InventoryAlertsPage() {
                   </Typography>
                 </Box>
               ) : (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: alpha(theme.palette.error.main, 0.04) }}>
-                        <TableCell><strong>{t('alerts.medicine')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.batch')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.category')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.stock')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.expiryDate')}</strong></TableCell>
-                        <TableCell><strong>{t('alerts.supplier')}</strong></TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {expiredBatches.map((item, idx) => (
-                        <TableRow 
-                          key={idx}
-                          sx={{ 
-                            '&:hover': { 
-                              backgroundColor: alpha(theme.palette.error.main, 0.02) 
-                            } 
-                          }}
-                        >
-                          <TableCell>
-                            <Typography fontWeight="medium" color="error.main">
-                              {item.medicineName}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <QrCode sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="body2">
-                                {item.batchNumber}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={item.category?.toUpperCase() || t('common.na')}
-                              color={getCategoryColor(item.category)}
-                              size="small"
-                              variant="outlined"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={t('alerts.units', { quantity: item.currentStock })}
-                              color="error"
-                              size="small"
-                              variant="outlined"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <CalendarToday sx={{ fontSize: 16, color: 'error.main' }} />
-                              <Typography variant="body2" color="error.main" fontWeight="bold">
-                                {new Date(item.expiryDate).toLocaleDateString()}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <Business sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="body2">
-                                {item.supplierName}
-                              </Typography>
-                            </Box>
-                          </TableCell>
+                <>
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow sx={{ backgroundColor: alpha(theme.palette.error.main, 0.04) }}>
+                          <TableCell><strong>{t('alerts.medicine')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.batch')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.category')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.stock')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.expiryDate')}</strong></TableCell>
+                          <TableCell><strong>{t('alerts.supplier')}</strong></TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      </TableHead>
+                      <TableBody>
+                        {paginatedExpired.map((item, idx) => (
+                          <TableRow 
+                            key={idx}
+                            sx={{ 
+                              '&:hover': { 
+                                backgroundColor: alpha(theme.palette.error.main, 0.02) 
+                              } 
+                            }}
+                          >
+                            <TableCell>
+                              <Typography fontWeight="medium" color="error.main">
+                                {item.medicineName}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <QrCode sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                <Typography variant="body2">
+                                  {item.batchNumber}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={item.category?.toUpperCase() || t('common.na')}
+                                color={getCategoryColor(item.category)}
+                                size="small"
+                                variant="outlined"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={t('alerts.units', { quantity: item.currentStock })}
+                                color="error"
+                                size="small"
+                                variant="outlined"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <CalendarToday sx={{ fontSize: 16, color: 'error.main' }} />
+                                <Typography variant="body2" color="error.main" fontWeight="bold">
+                                  {new Date(item.expiryDate).toLocaleDateString()}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Business sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                <Typography variant="body2">
+                                  {item.supplierName}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  
+                  {/* ✅ Expired Batches Pagination */}
+                  <TablePagination
+                    component="div"
+                    count={expiredBatches.length}
+                    page={expiredPage}
+                    onPageChange={(event, newPage) => handleChangePage(event, newPage, 'expired')}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    rowsPerPageOptions={[5, 10, 25, 50]}
+                    labelRowsPerPage={t('common.rowsPerPage')}
+                    labelDisplayedRows={({ from, to, count }) =>
+                      t('common.displayedRows', { from, to, count })
+                    }
+                  />
+                </>
               )}
             </Box>
           )}

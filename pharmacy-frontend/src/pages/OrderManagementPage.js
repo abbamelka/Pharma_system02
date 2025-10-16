@@ -33,6 +33,7 @@ import {
   alpha,
   useTheme,
   Badge,
+  TablePagination, // ✅ Added import
 } from "@mui/material";
 import { 
   PictureAsPdf, 
@@ -73,6 +74,10 @@ export default function OrderManagementPage() {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [selectedImage, setSelectedImage] = useState("");
   const [imageZoom, setImageZoom] = useState(1);
+
+  // ✅ Pagination state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const { user } = useAuth(); // Get current user role
   const theme = useTheme();
@@ -235,6 +240,28 @@ export default function OrderManagementPage() {
   const totalOrders = orders.length;
   const completedOrders = orders.filter(order => order.status === 'completed').length;
   const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total || 0), 0);
+
+  // ✅ Reset to first page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [filteredOrders]);
+
+  // ✅ Change page handler
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  // ✅ Change rows per page handler
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // ✅ Paginated orders
+  const paginatedOrders = filteredOrders.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 6 }}>
@@ -415,139 +442,156 @@ export default function OrderManagementPage() {
           </Typography>
         </Box>
       ) : (
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
-            borderRadius: 3,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            overflow: 'hidden'
-          }}
-        >
-          <Table>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
-                <TableCell><strong>{t('order.orderId')}</strong></TableCell>
-                <TableCell><strong>{t('order.customer')}</strong></TableCell>
-                <TableCell><strong>{t('order.cashier')}</strong></TableCell>
-                <TableCell align="right"><strong>{t('order.total')}</strong></TableCell>
-                <TableCell><strong>{t('order.status')}</strong></TableCell>
-                <TableCell><strong>{t('order.dateTime')}</strong></TableCell>
-                <TableCell><strong>{t('order.prescription')}</strong></TableCell>
-                <TableCell align="center"><strong>{t('order.actions')}</strong></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredOrders.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                    <LocalHospital sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                    <Typography variant="h6" color="textSecondary" gutterBottom>
-                      {t('order.noOrdersFound')}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' 
-                        ? t('order.tryAdjustingSearch') 
-                        : t('order.noOrdersCreated')
-                      }
-                    </Typography>
-                  </TableCell>
+        <>
+          <TableContainer 
+            component={Paper} 
+            sx={{ 
+              borderRadius: 3,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              overflow: 'hidden'
+            }}
+          >
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
+                  <TableCell><strong>{t('order.orderId')}</strong></TableCell>
+                  <TableCell><strong>{t('order.customer')}</strong></TableCell>
+                  <TableCell><strong>{t('order.cashier')}</strong></TableCell>
+                  <TableCell align="right"><strong>{t('order.total')}</strong></TableCell>
+                  <TableCell><strong>{t('order.status')}</strong></TableCell>
+                  <TableCell><strong>{t('order.dateTime')}</strong></TableCell>
+                  <TableCell><strong>{t('order.prescription')}</strong></TableCell>
+                  <TableCell align="center"><strong>{t('order.actions')}</strong></TableCell>
                 </TableRow>
-              ) : (
-                filteredOrders.map((order) => (
-                  <TableRow 
-                    key={order.id}
-                    sx={{ 
-                      '&:hover': { 
-                        backgroundColor: alpha(theme.palette.primary.main, 0.02) 
-                      } 
-                    }}
-                  >
-                    <TableCell>
-                      <Typography fontWeight="bold" color="primary">
-                        #{order.id}
+              </TableHead>
+              <TableBody>
+                {filteredOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                      <LocalHospital sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="h6" color="textSecondary" gutterBottom>
+                        {t('order.noOrdersFound')}
                       </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Person color="action" />
-                        <Typography>
-                          {order.customerName || t('order.walkInCustomer')}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {order.cashier?.name || t('order.userId', { id: order.cashierId })}
+                      <Typography variant="body2" color="textSecondary">
+                        {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' 
+                          ? t('order.tryAdjustingSearch') 
+                          : t('order.noOrdersCreated')
+                        }
                       </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body1" fontWeight="bold" color="success.main">
-                        ${parseFloat(order.total).toFixed(2)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={order.status.toUpperCase()}
-                        color={getStatusColor(order.status)}
-                        size="small"
-                        sx={{ fontWeight: 'bold', minWidth: 100 }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
-                        <Typography variant="body2">
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </Typography>
-                        <Typography variant="caption" color="textSecondary">
-                          {new Date(order.createdAt).toLocaleTimeString()}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      {order.prescriptionPhoto ? (
-                        <Badge color="primary" badgeContent="✓">
-                          <Chip 
-                            icon={<PictureAsPdf />} 
-                            label={t('order.uploaded')}
-                            color="primary" 
-                            size="small"
-                            variant="outlined"
-                          />
-                        </Badge>
-                      ) : (
-                        <Chip 
-                          label={t('order.notRequired')}
-                          size="small" 
-                          variant="outlined"
-                          color="default"
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell align="center">
-                      {order.prescriptionPhoto && (
-                        <Tooltip title={t('order.viewPrescription')}>
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleViewPrescription(order)}
-                            disabled={!['pharmacist', 'admin'].includes(user?.role)}
-                            sx={{
-                              '&:hover': {
-                                backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                              }
-                            }}
-                          >
-                            <Visibility />
-                          </IconButton>
-                        </Tooltip>
-                      )}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : (
+                  paginatedOrders.map((order) => (
+                    <TableRow 
+                      key={order.id}
+                      sx={{ 
+                        '&:hover': { 
+                          backgroundColor: alpha(theme.palette.primary.main, 0.02) 
+                        } 
+                      }}
+                    >
+                      <TableCell>
+                        <Typography fontWeight="bold" color="primary">
+                          #{order.id}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Person color="action" />
+                          <Typography>
+                            {order.customerName || t('order.walkInCustomer')}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {order.cashier?.name || t('order.userId', { id: order.cashierId })}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body1" fontWeight="bold" color="success.main">
+                          ${parseFloat(order.total).toFixed(2)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={order.status.toUpperCase()}
+                          color={getStatusColor(order.status)}
+                          size="small"
+                          sx={{ fontWeight: 'bold', minWidth: 100 }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
+                          <Typography variant="body2">
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            {new Date(order.createdAt).toLocaleTimeString()}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        {order.prescriptionPhoto ? (
+                          <Badge color="primary" badgeContent="✓">
+                            <Chip 
+                              icon={<PictureAsPdf />} 
+                              label={t('order.uploaded')}
+                              color="primary" 
+                              size="small"
+                              variant="outlined"
+                            />
+                          </Badge>
+                        ) : (
+                          <Chip 
+                            label={t('order.notRequired')}
+                            size="small" 
+                            variant="outlined"
+                            color="default"
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        {order.prescriptionPhoto && (
+                          <Tooltip title={t('order.viewPrescription')}>
+                            <IconButton
+                              color="primary"
+                              onClick={() => handleViewPrescription(order)}
+                              disabled={!['pharmacist', 'admin'].includes(user?.role)}
+                              sx={{
+                                '&:hover': {
+                                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                }
+                              }}
+                            >
+                              <Visibility />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* ✅ Pagination */}
+          <TablePagination
+            component="div"
+            count={filteredOrders.length}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            labelRowsPerPage={t('common.rowsPerPage')}
+            labelDisplayedRows={({ from, to, count }) =>
+              t('common.displayedRows', { from, to, count })
+            }
+          />
+        </>
       )}
 
       {/* Enhanced Prescription Viewer Modal */}

@@ -375,7 +375,7 @@ export default function ChangePasswordPage() {
                     💡 Password Tips
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    • Use at least 8 characters<br/>
+                    • Use at least 6 characters<br/>
                     • Include uppercase and lowercase letters<br/>
                     • Add numbers and special characters<br/>
                     • Avoid common words and personal information<br/>

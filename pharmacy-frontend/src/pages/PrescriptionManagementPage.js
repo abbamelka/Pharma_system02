@@ -36,6 +36,7 @@ import {
   alpha,
   useTheme,
   Autocomplete,
+  TablePagination, // ✅ Added import
 } from "@mui/material";
 import {
   Add,
@@ -87,6 +88,10 @@ export default function PrescriptionManagementPage() {
 
   // ✅ Initialize translation
   const { t } = useTranslation();
+
+  // ✅ Pagination state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // ✅ State for medicines in prescription
   const [medicines, setMedicines] = useState([{ id: "", medicineId: "", quantity: 1 }]);
@@ -211,6 +216,28 @@ export default function PrescriptionManagementPage() {
     return () => clearTimeout(timer);
   }, [fetchPrescriptions]);
 
+  // ✅ Reset pagination when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [prescriptions, statusFilter, activeTab]);
+
+  // ✅ Change page handler
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  // ✅ Change rows per page handler
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // ✅ Paginated list
+  const paginatedPrescriptions = prescriptions.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   // ✅ Add new medicine row with unique ID
   const addMedicineRow = () => {
     const newId = Date.now() + Math.random(); // Unique ID
@@ -327,6 +354,7 @@ const handleCreatePrescription = async () => {
     setPrescriptions([]);
     setError("");
     setStatusFilter("all");
+    setPage(0); // ✅ Reset pagination when switching tabs
   };
 
   const getStatusColor = (status) => {
@@ -596,209 +624,244 @@ const handleCreatePrescription = async () => {
         </Alert>
       )}
 
+      {/* Results Count */}
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6" color="textSecondary">
+          {t('prescriptionManagement.showingPrescriptions', { count: prescriptions.length })}
+        </Typography>
+        {searchPhone && (
+          <Button
+            color="secondary"
+            onClick={() => {
+              setSearchPhone("");
+              fetchPrescriptions();
+            }}
+          >
+            {t('prescriptionManagement.clearSearch')}
+          </Button>
+        )}
+      </Box>
+
       {/* Prescriptions Table */}
       {loading && activeTab === 0 ? (
         <TableSkeleton rows={5} columns={8} />
       ) : (
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
-            borderRadius: 3,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            overflow: 'hidden'
-          }}
-        >
-          <Table>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
-                <TableCell><strong>{t('prescriptionManagement.prescriptionId')}</strong></TableCell>
-                <TableCell><strong>{t('prescriptionManagement.doctor')}</strong></TableCell>
-                <TableCell><strong>{t('prescriptionManagement.patient')}</strong></TableCell>
-                <TableCell><strong>{t('prescriptionManagement.medicationDetails')}</strong></TableCell>
-                <TableCell><strong>{t('prescriptionManagement.issuedDate')}</strong></TableCell>
-                <TableCell><strong>{t('prescriptionManagement.validUntil')}</strong></TableCell>
-                <TableCell><strong>{t('prescriptionManagement.status')}</strong></TableCell>
-                <TableCell align="center"><strong>{t('prescriptionManagement.actions')}</strong></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {prescriptions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                    <MedicalServices sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                    <Typography variant="h6" color="textSecondary" gutterBottom>
-                      {t('prescriptionManagement.noPrescriptionsFound')}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      {activeTab === 0
-                        ? user?.role === "doctor"
-                          ? t('prescriptionManagement.noPrescriptionsCreated')
-                          : t('prescriptionManagement.noPendingPrescriptions')
-                        : searchPhone
-                          ? t('prescriptionManagement.noPrescriptionsForPhone')
-                          : t('prescriptionManagement.enterPhoneToSearch')
-                      }
-                    </Typography>
-                    {user?.role === "doctor" && activeTab === 0 && (
-                      <Button
-                        variant="contained"
-                        startIcon={<Add />}
-                        onClick={() => {
-                          setOpenCreateModal(true);
-                          setMedicines([{ id: Date.now(), medicineId: "", quantity: 1 }]);
-                        }}
-                        sx={{ mt: 2 }}
-                      >
-                        {t('prescriptionManagement.createFirstPrescription')}
-                      </Button>
-                    )}
-                  </TableCell>
+        <>
+          <TableContainer 
+            component={Paper} 
+            sx={{ 
+              borderRadius: 3,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              overflow: 'hidden'
+            }}
+          >
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
+                  <TableCell><strong>{t('prescriptionManagement.prescriptionId')}</strong></TableCell>
+                  <TableCell><strong>{t('prescriptionManagement.doctor')}</strong></TableCell>
+                  <TableCell><strong>{t('prescriptionManagement.patient')}</strong></TableCell>
+                  <TableCell><strong>{t('prescriptionManagement.medicationDetails')}</strong></TableCell>
+                  <TableCell><strong>{t('prescriptionManagement.issuedDate')}</strong></TableCell>
+                  <TableCell><strong>{t('prescriptionManagement.validUntil')}</strong></TableCell>
+                  <TableCell><strong>{t('prescriptionManagement.status')}</strong></TableCell>
+                  <TableCell align="center"><strong>{t('prescriptionManagement.actions')}</strong></TableCell>
                 </TableRow>
-              ) : (
-                prescriptions.map((prescription) => (
-                  <TableRow 
-                    key={prescription.id}
-                    sx={{ 
-                      '&:hover': { 
-                        backgroundColor: alpha(theme.palette.primary.main, 0.02) 
-                      } 
-                    }}
-                  >
-                    <TableCell>
-                      <Typography fontWeight="bold" color="primary">
-                        {t('prescriptionManagement.prescriptionNumber', { id: prescription.id })}
+              </TableHead>
+              <TableBody>
+                {paginatedPrescriptions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                      <MedicalServices sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="h6" color="textSecondary" gutterBottom>
+                        {t('prescriptionManagement.noPrescriptionsFound')}
                       </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <VerifiedUser color="action" />
-                        <Typography>
-                          {prescription.doctor?.username || t('prescriptionManagement.unknownDoctor')}
-                        </Typography>
-                        {prescription.doctorId === user?.id && (
-                          <Chip label={t('prescriptionManagement.you')} color="primary" size="small" />
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Person color="action" />
-                        <Box>
-                          <Typography fontWeight="medium">
-                            {prescription.customerName || t('prescriptionManagement.walkInPatient')}
-                          </Typography>
-                          {prescription.customerPhone && (
-                            <Typography variant="caption" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <Phone sx={{ fontSize: 14 }} />
-                              {prescription.customerPhone}
-                            </Typography>
-                          )}
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box>
-                        {/* ✅ Display human-readable details */}
-                        <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 'medium' }}>
-                          {prescription.details || t('prescriptionManagement.noMedicationDetails')}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                          <Chip label={prescription.dosage} size="small" variant="outlined" />
-                          <Chip label={prescription.frequency} size="small" variant="outlined" />
-                          <Chip label={prescription.duration} size="small" variant="outlined" />
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
-                        <Typography variant="body2">
-                          {new Date(prescription.issuedAt).toLocaleDateString()}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
-                        <Box>
-                          <Typography variant="body2">
-                            {prescription.validUntil ? new Date(prescription.validUntil).toLocaleDateString() : t('common.na')}
-                          </Typography>
-                          {isPrescriptionExpired(prescription.validUntil) && (
-                            <Chip 
-                              icon={<Warning />} 
-                              label={t('prescriptionManagement.expired')} 
-                              color="error" 
-                              size="small" 
-                              sx={{ mt: 0.5 }}
-                            />
-                          )}
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        icon={getStatusIcon(prescription.status)}
-                        label={prescription.status.toUpperCase()}
-                        color={getStatusColor(prescription.status)}
-                        variant="filled"
-                        sx={{ fontWeight: 'bold' }}
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <Box sx={{ display: "flex", gap: 1, justifyContent: 'center' }}>
-                        {/* FULFILL BUTTON - Pharmacists/Admins only for pending prescriptions */}
-                        {prescription.status === "pending" && canFulfillPrescription && (
-                          <Tooltip title={t('prescriptionManagement.fulfillPrescription')}>
-                            <IconButton
-                              color="success"
-                              size="small"
-                              onClick={() => handleFulfillPrescription(prescription.id)}
-                              sx={{
-                                '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) }
-                              }}
-                            >
-                              <CheckCircle />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        
-                        {/* CANCEL BUTTON - Available for both doctors and pharmacists */}
-                        {prescription.status === "pending" && canCancelPrescription && (
-                          <Tooltip title={t('prescriptionManagement.cancelPrescription')}>
-                            <IconButton
-                              color="error"
-                              size="small"
-                              onClick={() => handleCancelPrescription(prescription.id)}
-                              sx={{
-                                '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) }
-                              }}
-                            >
-                              <Cancel />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        
-                        {/* VIEW BUTTON - Available for all users */}
-                        <Tooltip title={t('prescriptionManagement.viewDetails')}>
-                          <IconButton
-                            color="info"
-                            size="small"
-                            sx={{
-                              '&:hover': { backgroundColor: alpha(theme.palette.info.main, 0.1) }
-                            }}
-                          >
-                            <Visibility />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
+                      <Typography variant="body2" color="textSecondary">
+                        {activeTab === 0
+                          ? user?.role === "doctor"
+                            ? t('prescriptionManagement.noPrescriptionsCreated')
+                            : t('prescriptionManagement.noPendingPrescriptions')
+                          : searchPhone
+                            ? t('prescriptionManagement.noPrescriptionsForPhone')
+                            : t('prescriptionManagement.enterPhoneToSearch')
+                        }
+                      </Typography>
+                      {user?.role === "doctor" && activeTab === 0 && (
+                        <Button
+                          variant="contained"
+                          startIcon={<Add />}
+                          onClick={() => {
+                            setOpenCreateModal(true);
+                            setMedicines([{ id: Date.now(), medicineId: "", quantity: 1 }]);
+                          }}
+                          sx={{ mt: 2 }}
+                        >
+                          {t('prescriptionManagement.createFirstPrescription')}
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : (
+                  paginatedPrescriptions.map((prescription) => (
+                    <TableRow 
+                      key={prescription.id}
+                      sx={{ 
+                        '&:hover': { 
+                          backgroundColor: alpha(theme.palette.primary.main, 0.02) 
+                        } 
+                      }}
+                    >
+                      <TableCell>
+                        <Typography fontWeight="bold" color="primary">
+                          {t('prescriptionManagement.prescriptionNumber', { id: prescription.id })}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <VerifiedUser color="action" />
+                          <Typography>
+                            {prescription.doctor?.username || t('prescriptionManagement.unknownDoctor')}
+                          </Typography>
+                          {prescription.doctorId === user?.id && (
+                            <Chip label={t('prescriptionManagement.you')} color="primary" size="small" />
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Person color="action" />
+                          <Box>
+                            <Typography fontWeight="medium">
+                              {prescription.customerName || t('prescriptionManagement.walkInPatient')}
+                            </Typography>
+                            {prescription.customerPhone && (
+                              <Typography variant="caption" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Phone sx={{ fontSize: 14 }} />
+                                {prescription.customerPhone}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          {/* ✅ Display human-readable details */}
+                          <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 'medium' }}>
+                            {prescription.details || t('prescriptionManagement.noMedicationDetails')}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Chip label={prescription.dosage} size="small" variant="outlined" />
+                            <Chip label={prescription.frequency} size="small" variant="outlined" />
+                            <Chip label={prescription.duration} size="small" variant="outlined" />
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
+                          <Typography variant="body2">
+                            {new Date(prescription.issuedAt).toLocaleDateString()}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
+                          <Box>
+                            <Typography variant="body2">
+                              {prescription.validUntil ? new Date(prescription.validUntil).toLocaleDateString() : t('common.na')}
+                            </Typography>
+                            {isPrescriptionExpired(prescription.validUntil) && (
+                              <Chip 
+                                icon={<Warning />} 
+                                label={t('prescriptionManagement.expired')} 
+                                color="error" 
+                                size="small" 
+                                sx={{ mt: 0.5 }}
+                              />
+                            )}
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          icon={getStatusIcon(prescription.status)}
+                          label={prescription.status.toUpperCase()}
+                          color={getStatusColor(prescription.status)}
+                          variant="filled"
+                          sx={{ fontWeight: 'bold' }}
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: "flex", gap: 1, justifyContent: 'center' }}>
+                          {/* FULFILL BUTTON - Pharmacists/Admins only for pending prescriptions */}
+                          {prescription.status === "pending" && canFulfillPrescription && (
+                            <Tooltip title={t('prescriptionManagement.fulfillPrescription')}>
+                              <IconButton
+                                color="success"
+                                size="small"
+                                onClick={() => handleFulfillPrescription(prescription.id)}
+                                sx={{
+                                  '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) }
+                                }}
+                              >
+                                <CheckCircle />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          
+                          {/* CANCEL BUTTON - Available for both doctors and pharmacists */}
+                          {prescription.status === "pending" && canCancelPrescription && (
+                            <Tooltip title={t('prescriptionManagement.cancelPrescription')}>
+                              <IconButton
+                                color="error"
+                                size="small"
+                                onClick={() => handleCancelPrescription(prescription.id)}
+                                sx={{
+                                  '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) }
+                                }}
+                              >
+                                <Cancel />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          
+                          {/* VIEW BUTTON - Available for all users */}
+                          <Tooltip title={t('prescriptionManagement.viewDetails')}>
+                            <IconButton
+                              color="info"
+                              size="small"
+                              sx={{
+                                '&:hover': { backgroundColor: alpha(theme.palette.info.main, 0.1) }
+                              }}
+                            >
+                              <Visibility />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* ✅ Pagination */}
+          <TablePagination
+            component="div"
+            count={prescriptions.length}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            labelRowsPerPage={t('common.rowsPerPage')}
+            labelDisplayedRows={({ from, to, count }) =>
+              t('common.displayedRows', { from, to, count })
+            }
+          />
+        </>
       )}
 
       {/* CREATE PRESCRIPTION MODAL - DOCTORS ONLY */}

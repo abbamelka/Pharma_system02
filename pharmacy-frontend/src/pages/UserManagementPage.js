@@ -34,6 +34,7 @@ import {
   useTheme,
   CircularProgress,
   Divider,
+  TablePagination, // ✅ Added import
 } from "@mui/material";
 import {
   Add,
@@ -82,6 +83,10 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // ✅ Pagination state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -159,6 +164,28 @@ export default function UserManagementPage() {
 
     return matchesSearch && matchesRole && matchesStatus;
   });
+
+  // ✅ Reset pagination when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [filteredUsers]);
+
+  // ✅ Change page handler
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  // ✅ Change rows per page handler
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // ✅ Paginated list
+  const paginatedUsers = filteredUsers.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
 
   const handleCreateUser = async () => {
     if (!formData.username.trim()) {
@@ -530,7 +557,7 @@ export default function UserManagementPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredUsers.length === 0 ? (
+            {paginatedUsers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                   <Group sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
@@ -546,7 +573,7 @@ export default function UserManagementPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredUsers.map((user) => (
+              paginatedUsers.map((user) => (
                 <TableRow 
                   key={user.id}
                   sx={{ 
@@ -642,6 +669,21 @@ export default function UserManagementPage() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* ✅ Pagination */}
+      <TablePagination
+        component="div"
+        count={filteredUsers.length}
+        page={page}
+        onPageChange={handleChangePage}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        rowsPerPageOptions={[5, 10, 25, 50]}
+        labelRowsPerPage={t('common.rowsPerPage')}
+        labelDisplayedRows={({ from, to, count }) =>
+          t('common.displayedRows', { from, to, count })
+        }
+      />
 
       {/* Enhanced Modals */}
       <EnhancedUserModal

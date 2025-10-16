@@ -35,6 +35,7 @@ import {
   useTheme,
   Badge,
   Divider,
+  TablePagination, // ✅ Added import
 } from "@mui/material";
 import {
   Search,
@@ -87,6 +88,10 @@ export default function InventoryManagementPage() {
 
   // ✅ Initialize translation
   const { t } = useTranslation();
+
+  // ✅ Pagination state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const [formData, setFormData] = useState({
     batchNumber: "",
@@ -231,6 +236,28 @@ export default function InventoryManagementPage() {
 
     return matchesSearch && matchesStatus && matchesCategory;
   });
+
+  // ✅ Reset pagination when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [filteredInventory]);
+
+  // ✅ Change page handler
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  // ✅ Change rows per page handler
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // ✅ Paginated list
+  const paginatedInventory = filteredInventory.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
 
   const handleOpenAddModal = (medicine) => {
     setCurrentMedicine(medicine);
@@ -551,7 +578,7 @@ export default function InventoryManagementPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredInventory.length === 0 ? (
+            {paginatedInventory.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                   <Inventory sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
@@ -567,7 +594,7 @@ export default function InventoryManagementPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredInventory.map((item) => {
+              paginatedInventory.map((item) => {
                 const stockStatus = getStockStatus(item.quantity);
                 const expiryStatus = getExpiryStatus(item.expiryDate);
 
@@ -688,6 +715,21 @@ export default function InventoryManagementPage() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* ✅ Pagination */}
+      <TablePagination
+        component="div"
+        count={filteredInventory.length}
+        page={page}
+        onPageChange={handleChangePage}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        rowsPerPageOptions={[5, 10, 25, 50]}
+        labelRowsPerPage={t('common.rowsPerPage')}
+        labelDisplayedRows={({ from, to, count }) =>
+          t('common.displayedRows', { from, to, count })
+        }
+      />
 
       {/* Enhanced Add Inventory Modal */}
       <EnhancedAddInventoryModal
