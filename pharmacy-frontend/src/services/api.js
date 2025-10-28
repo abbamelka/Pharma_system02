@@ -1,7 +1,7 @@
 // src/services/api.js
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5000"; // Change to your backend URL
+const API_BASE_URL = "http://localhost:5000";
 
 // Create Axios instance
 const api = axios.create({
@@ -36,7 +36,6 @@ export const getExpiringSoonAlerts = (days = 30) =>
   api.get(`/inventory/expiring-soon?days=${days}`);
 
 // ===== Orders =====
-// Interceptor to handle FormData
 api.interceptors.request.use(config => {
   if (config.data instanceof FormData) {
     config.headers['Content-Type'] = 'multipart/form-data';
@@ -90,7 +89,7 @@ export const getBatchById = (id) => api.get(`/inventory/batch/${id}`);
 export const createUser = (userData) => api.post("/users/register", userData);
 export const changePassword = (passwordData) => api.put("/users/password", passwordData);
 export const updateUserStatus = (id, status) =>
-  api.patch(`/users/${id}/status`, { status }); // ✅ Supports both suspend & activate
+  api.patch(`/users/${id}/status`, { status });
 export const deleteUser = (id) => api.delete(`/users/${id}`);
 export const getAllUsers = () => api.get("/users");
 
@@ -106,12 +105,23 @@ export const deleteSupplier = (id) => api.delete(`/suppliers/${id}`);
 export const getAuditLogs = () => api.get("/audit/logs");
 
 // ===== AI Assistant =====
-/**
- * Send a message to the AI assistant and get a response about medicines
- * @param {string} query - The user's question about a medicine
- * @returns {Promise}
- */
 export const aiChat = (query) => api.post("/ai/medicine-chat", { query });
+
+// ===== Roles & Menus - CORRECTED ENDPOINTS =====
+
+// Roles
+export const getAllRoles = () => api.get("/roles"); // ✅ Correct - admin only
+export const getUserRoles = (userId) => api.get(`/roles/user/${userId}`); // ✅ Correct - user can access own
+export const assignRoleToUser = (data) => api.post("/roles/assign", data); // ✅ Correct - admin only
+export const removeRoleFromUser = (data) => api.post("/roles/remove", data); // ✅ Correct - admin only
+
+// Menus
+export const getMenusByRole = (roleId) => api.get(`/roles/${roleId}/menus`); // ✅ CORRECTED - was /menus/${roleId}
+export const fetchAllMenus = () => api.get("/menus/all"); // ✅ Correct
+
+// Menu management (admin only)
+export const assignMenuToRole = (data) => api.post("/menus/assign", data); // ✅ Correct
+export const removeMenuFromRole = (data) => api.post("/menus/remove", data); // ✅ Correct
 
 // Grouped exports for scalability
 export const reportsApi = { getDailySales, getTopMedicines, getLowStockAlerts, getExpiringSoonAlerts };

@@ -1,11 +1,11 @@
 // services/user.service.js
 const bcrypt = require("bcrypt");
-const { User } = require("../models");
+const { User, Role, UserRoles } = require("../models");
 const { generateToken } = require("../utils/jwt");
 const UserRepository = require("../repositories/user.repository");
 
 class UserService {
-  // ✅ Create a new user (registration)
+  // ✅ Create a new user (registration) - CORRECTED
   static async register({ username, email, password, role }) {
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
@@ -20,20 +20,44 @@ class UserService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create user
     const user = await User.create({
       username,
       email,
       password: hashedPassword,
       role,
-      status: "active" // Default status
+      status: "active"
     });
+
+    // Find the role in Roles table
+    const roleRecord = await Role.findOne({ where: { name: role } });
+
+    if (!roleRecord) {
+      throw new Error(`Role '${role}' not found in Roles table`);
+    }
+
+    // Create entry in UserRoles junction table
+    await UserRoles.create({
+      userId: user.id,
+      roleId: roleRecord.id
+    });
+
+    console.log(`✅ User ${username} created with role ${role} and UserRoles entry`);
 
     return user;
   }
 
-  // ✅ Login and return JWT
+  // ✅ Login and return JWT - CORRECTED
   static async login({ email, password }) {
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ 
+      where: { email },
+      include: [{
+        model: Role,
+        as: 'Roles',
+        through: { attributes: [] }
+      }]
+    });
+    
     if (!user) throw new Error("Invalid email or password");
 
     if (user.status === "suspended") {
@@ -43,10 +67,24 @@ class UserService {
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) throw new Error("Invalid email or password");
 
-    const token = generateToken({ id: user.id, role: user.role });
+    // Get roles from UserRoles table
+    let userRoles = [];
+    if (user.Roles && user.Roles.length > 0) {
+      userRoles = user.Roles.map(role => role.name);
+    } else if (user.role) {
+      userRoles = [user.role];
+    }
 
-    // Return safe user object (exclude password)
+    const token = generateToken({ 
+      id: user.id, 
+      role: userRoles[0],
+      roles: userRoles
+    });
+
+    // Return safe user object with roles
     const { password: _, ...safeUser } = user.toJSON();
+    safeUser.roles = userRoles;
+
     return { token, user: safeUser };
   }
 
@@ -98,8 +136,8 @@ class UserService {
     const user = await User.findByPk(userId);
     if (!user) throw new Error("User not found");
 
-    // Prevent self-deletion? Optional security
-    // if (user.id === currentUserId) throw new Error("You cannot delete your own account");
+    // Also delete from UserRoles table
+    await UserRoles.destroy({ where: { userId } });
 
     await user.destroy();
 
@@ -139,10 +177,7 @@ class UserService {
       throw new Error("User not found");
     }
 
-    // 🔐 Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update password
     await UserRepository.updateUser(targetUserId, { password: hashedPassword });
 
     return { 
@@ -150,10 +185,10 @@ class UserService {
       message: `Password reset successfully for user ID: ${targetUserId}` 
     };
   }
- static async findById(id) {
+
+  static async findById(id) {
     return await UserRepository.findById(id);
   }
-
 }
 
 module.exports = UserService;

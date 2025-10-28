@@ -1,5 +1,5 @@
 // src/components/Layout.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Drawer,
@@ -12,16 +12,15 @@ import {
   Typography,
   CssBaseline,
   Divider,
-  Menu,
-  MenuItem,
-  Avatar,
+  Chip,
   IconButton,
+  CircularProgress,
   Tooltip,
   alpha,
-  useTheme,
-  Badge,
-  Chip,
-  Collapse,
+  Avatar,
+  Menu,
+  MenuItem,
+  useTheme as useMuiTheme,
 } from "@mui/material";
 import {
   Dashboard as DashboardIcon,
@@ -30,65 +29,269 @@ import {
   Inventory as InventoryIcon,
   Description as DescriptionIcon,
   People as PeopleIcon,
-  Lock as LockIcon,
   Warning as WarningIcon,
   Business as BusinessIcon,
-  Logout as LogoutIcon,
-  Brightness4 as Brightness4Icon,
-  Brightness7 as Brightness7Icon,
   History as HistoryIcon,
   ListAlt as ListAltIcon,
-  ExpandLess,
-  ExpandMore,
   ChevronLeft,
   ChevronRight,
   MedicalServices,
-  Notifications,
-  Settings,
+  Brightness4 as Brightness4Icon,
+  Brightness7 as Brightness7Icon,
   Translate as TranslateIcon,
 } from "@mui/icons-material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme as useCustomTheme } from "../context/ThemeContext";
-import { useTranslation } from 'react-i18next';
-import { Outlet } from "react-router-dom";
-import AIChatBot from "./AIChatBot"; // Ensure this path is correct
+import { useTranslation } from "react-i18next";
+import AIChatBot from "./AIChatBot";
+import { getUserRoles, getMenusByRole, fetchAllMenus } from "../services/api";
 
 const drawerWidth = 280;
 const collapsedDrawerWidth = 70;
 
+// Icon mapping
+const iconMap = {
+  DashboardIcon,
+  ReceiptIcon,
+  MedicineIcon,
+  InventoryIcon,
+  DescriptionIcon,
+  PeopleIcon,
+  WarningIcon,
+  BusinessIcon,
+  HistoryIcon,
+  ListAltIcon,
+};
+
+// Frontend menu translations mapping
+const menuTranslations = {
+  1: {
+    en: { title: 'Dashboard', text: 'Dashboard' },
+    am: { title: 'ዳሽቦርድ', text: 'ዳሽቦርድ' },
+    om: { title: 'Daashboordii', text: 'Daashboordii' }
+  },
+  2: {
+    en: { title: 'Billing & Orders', text: 'Create Order' },
+    am: { title: 'ቢሊንግ እና ትዕዛዞች', text: 'ትዕዛዝ ፍጠር' },
+    om: { title: 'Biliingaa fi Ajajamota', text: 'Ajajama Uumu' }
+  },
+  3: {
+    en: { title: 'Billing & Orders', text: 'Order Management' },
+    am: { title: 'ቢሊንግ እና ትዕዛዞች', text: 'የትዕዛዝ አስተዳደር' },
+    om: { title: 'Biliingaa fi Ajajamota', text: 'Mangamantaa Ajajamaa' }
+  },
+  4: {
+    en: { title: 'Medicines & Inventory', text: 'Medicine Management' },
+    am: { title: 'መድሃኒቶች እና ክምችት', text: 'የመድሃኒት አስተዳደር' },
+    om: { title: 'Qorichoo fi Qabeenya', text: 'Mangamantaa Qorichaa' }
+  },
+  5: {
+    en: { title: 'Medicines & Inventory', text: 'Inventory Management' },
+    am: { title: 'መድሃኒቶች እና ክምችት', text: 'የክምችት አስተዳደር' },
+    om: { title: 'Qorichoo fi Qabeenya', text: 'Mangamantaa Qabeenyaa' }
+  },
+  6: {
+    en: { title: 'Medicines & Inventory', text: 'Inventory Alerts' },
+    am: { title: 'መድሃኒቶች እና ክምችት', text: 'የክምችት ማንቂያዎች' },
+    om: { title: 'Qorichoo fi Qabeenya', text: 'Akeekkachiisa Qabeenyaa' }
+  },
+  7: {
+    en: { title: 'Medicines & Inventory', text: 'Supplier Management' },
+    am: { title: 'መድሃኒቶች እና ክምችት', text: 'የስብሰባ አስተዳደር' },
+    om: { title: 'Qorichoo fi Qabeenya', text: 'Mangamantaa Ooggessaa' }
+  },
+  8: {
+    en: { title: 'Prescriptions', text: 'Prescriptions' },
+    am: { title: 'ፕሬስክሪፕሽን', text: 'ፕሬስክሪፕሽን' },
+    om: { title: 'Qoricha Dhiheenyaa', text: 'Qoricha Dhiheenyaa' }
+  },
+  9: {
+    en: { title: 'Prescriptions', text: 'Prescription Management' },
+    am: { title: 'ፕሬስክሪፕሽን', text: 'የፕሬስክሪፕሽን አስተዳደር' },
+    om: { title: 'Qoricha Dhiheenyaa', text: 'Mangamantaa Qorichaa Dhiheenyaa' }
+  },
+  10: {
+    en: { title: 'Administration', text: 'User Management' },
+    am: { title: 'አስተዳደር', text: 'የተጠቃሚ አስተዳደር' },
+    om: { title: 'Administreeshinii', text: 'Mangamantaa Fayyadamtaa' }
+  },
+  11: {
+    en: { title: 'Administration', text: 'Audit Logs' },
+    am: { title: 'አስተዳደር', text: 'የኦዲት ምዝግቦች' },
+    om: { title: 'Administreeshinii', text: 'Logii Auditaa' }
+  }
+};
+
 export default function Layout() {
-  const theme = useTheme();
+  const muiTheme = useMuiTheme();
+  const { mode, toggleTheme } = useCustomTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { mode, toggleTheme } = useCustomTheme();
   const { i18n, t } = useTranslation();
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
-  const [collapsed, setCollapsed] = useState(false);
-  const [openSections, setOpenSections] = useState({});
 
+  const [collapsed, setCollapsed] = useState(false);
+  const [menuSections, setMenuSections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [languageAnchorEl, setLanguageAnchorEl] = useState(null);
+  const [menuData, setMenuData] = useState([]); // Store raw menu data
+
+  const toggleCollapse = () => setCollapsed(!collapsed);
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
+  const handleLanguageMenuOpen = (event) => setLanguageAnchorEl(event.currentTarget);
+  const handleLanguageMenuClose = () => setLanguageAnchorEl(null);
 
-  const handleLanguageMenuOpen = (event) => setMenuAnchorEl(event.currentTarget);
-  const handleLanguageMenuClose = () => setMenuAnchorEl(null);
+  const isActivePath = (path) =>
+    location.pathname === path || location.pathname.startsWith(path + "/");
 
-  const handleNavigate = (path) => {
-    navigate(path);
-    handleMenuClose();
+  // Function to get translated menu text based on current language - UPDATED
+  const getTranslatedMenuText = (menu) => {
+    const currentLanguage = i18n.language;
+    
+    // Check if we have translations for this menu
+    if (menuTranslations[menu.id] && menuTranslations[menu.id][currentLanguage]) {
+      const translation = menuTranslations[menu.id][currentLanguage];
+      console.log('Using frontend translation for menu:', {
+        menuId: menu.id,
+        language: currentLanguage,
+        original: { title: menu.title, text: menu.text },
+        translated: translation
+      });
+      return translation;
+    }
+    
+    // Fallback to original English
+    console.log('No translation found for menu, using fallback:', {
+      menuId: menu.id,
+      language: currentLanguage,
+      usingFallback: { title: menu.title, text: menu.text }
+    });
+    
+    return {
+      title: menu.title || 'Untitled',
+      text: menu.text || 'No Text'
+    };
   };
 
-  const toggleSection = (section) => {
-    setOpenSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+  // Fetch menus - store raw data
+  useEffect(() => {
+    const loadMenus = async () => {
+      if (!user) return;
+
+      setLoading(true);
+      try {
+        console.log('Loading menus for language:', i18n.language);
+        
+        // Step 1: Get user roles
+        const rolesRes = await getUserRoles(user.id);
+        const userRoles = rolesRes.data;
+        console.log('User roles:', userRoles);
+
+        // If no roles → empty menu
+        if (!userRoles?.length) {
+          setMenuData([]);
+          setMenuSections([]);
+          setLoading(false);
+          return;
+        }
+
+        // Check if user is superadmin
+        const isSuperAdmin = userRoles.some(r => r.name.toLowerCase() === 'superadmin');
+        console.log('Is superadmin:', isSuperAdmin);
+
+        let menus = [];
+
+        if (isSuperAdmin) {
+          // Superadmin gets all menus
+          const allMenusRes = await fetchAllMenus();
+          menus = allMenusRes.data;
+          console.log('Superadmin menus:', menus);
+        } else {
+          // Regular user: collect menus from all roles
+          const menuPromises = userRoles.map(role => getMenusByRole(role.id));
+          const results = await Promise.all(menuPromises);
+          console.log('Menu results:', results);
+
+          // Flatten and deduplicate by id
+          const merged = results.flatMap(res => res.data || []);
+          menus = Array.from(new Map(merged.map(m => [m.id, m])).values());
+          console.log('Regular user menus:', menus);
+        }
+
+        // Store raw menu data for re-translation
+        setMenuData(menus);
+        
+        // Apply translations to all menus
+        applyTranslations(menus);
+        
+      } catch (err) {
+        console.error("Failed to load menus:", err);
+        setMenuData([]);
+        setMenuSections([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMenus();
+  }, [user]); // Only depend on user, not language
+
+  // Apply translations whenever language changes
+  useEffect(() => {
+    if (menuData.length > 0) {
+      console.log('Re-applying translations for language:', i18n.language);
+      applyTranslations(menuData);
+    }
+  }, [i18n.language, menuData]);
+
+  // Function to apply translations and group menus
+  const applyTranslations = (menus) => {
+    const translatedMenus = menus.map(menu => {
+      const translated = getTranslatedMenuText(menu);
+      const translatedMenu = {
+        ...menu,
+        displayTitle: translated.title, // Use separate field for display
+        displayText: translated.text    // Use separate field for display
+      };
+      console.log('Translated menu:', {
+        originalTitle: menu.title,
+        originalText: menu.text,
+        translatedTitle: translatedMenu.displayTitle,
+        translatedText: translatedMenu.displayText
+      });
+      return translatedMenu;
+    });
+
+    // Group by displayTitle (FIXED: was using title which caused issues)
+    const grouped = translatedMenus.reduce((acc, menu) => {
+      let section = acc.find(s => s.title === menu.displayTitle);
+      if (!section) {
+        section = { 
+          title: menu.displayTitle, 
+          items: [] 
+        };
+        acc.push(section);
+      }
+      section.items.push(menu);
+      return acc;
+    }, []);
+
+    console.log('Grouped menus:', grouped);
+
+    // Sort sections and items alphabetically
+    grouped.forEach(s => s.items.sort((a, b) => a.displayText.localeCompare(b.displayText)));
+    grouped.sort((a, b) => a.title.localeCompare(b.title));
+
+    setMenuSections(grouped);
   };
 
-  const toggleCollapse = () => {
-    setCollapsed(!collapsed);
+  const changeLanguage = (code) => {
+    console.log('Changing language to:', code);
+    i18n.changeLanguage(code);
+    handleLanguageMenuClose();
   };
 
   if (!user) {
@@ -100,26 +303,26 @@ export default function Layout() {
           sx={{
             width: drawerWidth,
             flexShrink: 0,
-            '& .MuiDrawer-paper': { 
-              width: drawerWidth, 
-              boxSizing: 'border-box',
-              background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-              color: 'white',
+            "& .MuiDrawer-paper": {
+              width: drawerWidth,
+              boxSizing: "border-box",
+              background: `linear-gradient(180deg, ${muiTheme.palette.primary.main} 0%, ${muiTheme.palette.primary.dark} 100%)`,
+              color: "white",
             },
           }}
         >
-          <Toolbar sx={{ justifyContent: 'center' }}>
+          <Toolbar sx={{ justifyContent: "center" }}>
             <MedicalServices sx={{ mr: 2 }} />
-            <Typography variant="h6" noWrap sx={{ fontWeight: 'bold' }}>
+            <Typography variant="h6" noWrap sx={{ fontWeight: "bold" }}>
               PharmaCare
             </Typography>
           </Toolbar>
-          <Divider sx={{ borderColor: alpha('#fff', 0.2) }} />
+          <Divider sx={{ borderColor: alpha("#fff", 0.2) }} />
           <List>
             <ListItem>
-              <ListItemText 
-                primary="Loading user..." 
-                sx={{ color: 'white', textAlign: 'center' }} 
+              <ListItemText
+                primary="Loading..."
+                sx={{ color: "white", textAlign: "center" }}
               />
             </ListItem>
           </List>
@@ -128,15 +331,13 @@ export default function Layout() {
           component="main"
           sx={{
             flexGrow: 1,
-            bgcolor: 'background.default',
-            color: 'text.primary',
-            minHeight: '100vh',
-            p: 3
+            bgcolor: "background.default",
+            minHeight: "100vh",
+            p: 3,
           }}
         >
           <Toolbar />
           <Outlet />
-          {/* ✅ AI ChatBot added here — visible even when not logged in */}
           <AIChatBot />
         </Box>
       </Box>
@@ -144,84 +345,22 @@ export default function Layout() {
   }
 
   const username = user.username || user.email?.split("@")[0] || "User";
-  const role = user.role || "user";
+  const roleNames = user.role ? [user.role] : [];
 
-  // Supported languages
+  // Supported languages WITH FLAGS
   const languages = [
-    { code: 'en', name: t('common.english'), flag: '🇬🇧' },
-    { code: 'am', name: t('common.amharic'), flag: '🇪🇹' },
-    { code: 'om', name: t('common.oromo'), flag: '🇪🇹' }
+    { code: "en", name: t("common.english"), flag: "🇬🇧" },
+    { code: "am", name: t("common.amharic"), flag: "🇪🇹" },
+    { code: "om", name: t("common.oromo"), flag: "🇪🇹" },
   ];
+  const currentLang = languages.find((l) => l.code === i18n.language) || languages[0];
 
-  const currentLang = languages.find(l => l.code === i18n.language) || languages[0];
-
-  const changeLanguage = (code) => {
-    i18n.changeLanguage(code);
-    handleLanguageMenuClose();
-  };
-
-  // Enhanced menu structure with sections
-  const menuSections = [
-    {
-      title: t('layout.dashboard'),
-      items: [
-        { text: t('layout.dashboard'), icon: <DashboardIcon />, path: "/dashboard", roles: ["admin"], badge: 0 },
-      ]
-    },
-    {
-      title: t('layout.billingAndOrders'),
-      items: [
-        { text: t('layout.createOrder'), icon: <ReceiptIcon />, path: "/orders/create", roles: ["admin", "cashier"], badge: 0 },
-        { text: t('layout.orderManagement'), icon: <ListAltIcon />, path: "/orders/manage", roles: ["admin", "pharmacist"], badge: 3 },
-      ]
-    },
-    {
-      title: t('layout.medicinesAndInventory'),
-      items: [
-        { text: t('layout.medicineManagement'), icon: <MedicineIcon />, path: "/medicines/manage", roles: ["admin", "pharmacist"], badge: 0 },
-        { text: t('layout.inventoryManagement'), icon: <InventoryIcon />, path: "/inventory/manage", roles: ["admin", "pharmacist"], badge: 5 },
-        { text: t('layout.inventoryAlerts'), icon: <WarningIcon />, path: "/inventory/alerts", roles: ["admin", "pharmacist"], badge: 2 },
-        { text: t('layout.supplierManagement'), icon: <BusinessIcon />, path: "/suppliers", roles: ["admin", "pharmacist"], badge: 0 },
-      ]
-    },
-    {
-      title: t('layout.prescriptions'),
-      items: [
-        { text: t('layout.prescriptions'), icon: <DescriptionIcon />, path: "/prescriptions", roles: ["admin", "pharmacist", "doctor"], badge: 0 },
-        { text: t('layout.prescriptionManagement'), icon: <DescriptionIcon />, path: "/prescriptions/manage", roles: ["admin", "pharmacist", "doctor"], badge: 7 },
-      ]
-    },
-    {
-      title: t('layout.administration'),
-      items: [
-        { text: t('layout.userManagement'), icon: <PeopleIcon />, path: "/users", roles: ["admin"], badge: 0 },
-        { text: t('layout.auditLogs'), icon: <HistoryIcon />, path: "/audit-logs", roles: ["admin"], badge: 0 },
-      ]
-    }
-  ];
-
-  const getFilteredMenuItems = () => {
-    return menuSections.map(section => ({
-      ...section,
-      items: section.items.filter(item => item.roles.includes(role))
-    })).filter(section => section.items.length > 0);
-  };
-
-  const filteredMenuSections = getFilteredMenuItems();
-
-  const isActivePath = (path) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
-  };
-
-  const getRoleColor = (role) => {
-    switch (role) {
-      case 'admin': return 'error';
-      case 'pharmacist': return 'primary';
-      case 'cashier': return 'secondary';
-      case 'doctor': return 'info';
-      default: return 'default';
-    }
-  };
+  // Debug component
+  const DebugInfo = () => (
+    <Box sx={{ position: 'fixed', bottom: 10, right: 10, bgcolor: 'black', color: 'white', p: 1, fontSize: '12px', zIndex: 9999 }}>
+      Language: {i18n.language} | Menus: {menuSections.length} | Sections: {JSON.stringify(menuSections.map(s => s.title))}
+    </Box>
+  );
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -233,66 +372,46 @@ export default function Layout() {
         sx={{
           width: collapsed ? collapsedDrawerWidth : drawerWidth,
           flexShrink: 0,
-          transition: theme.transitions.create('width', {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
-          }),
-          [`& .MuiDrawer-paper`]: {
+          "& .MuiDrawer-paper": {
             width: collapsed ? collapsedDrawerWidth : drawerWidth,
             boxSizing: "border-box",
-            backgroundColor: 'background.paper',
-            color: 'text.primary',
-            borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${theme.palette.background.paper} 100%)`,
-            transition: theme.transitions.create('width', {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
+            backgroundColor: "background.paper",
+            color: "text.primary",
+            borderRight: `1px solid ${alpha(muiTheme.palette.divider, 0.1)}`,
           },
         }}
       >
         {/* Header */}
-        <Toolbar 
-          sx={{ 
-            justifyContent: collapsed ? 'center' : 'space-between',
-            minHeight: '80px !important',
-            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+        <Toolbar
+          sx={{
+            justifyContent: collapsed ? "center" : "space-between",
+            minHeight: "80px !important",
+            borderBottom: `1px solid ${alpha(muiTheme.palette.divider, 0.1)}`,
           }}
         >
           {!collapsed && (
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <MedicalServices 
-                sx={{ 
-                  mr: 2, 
-                  color: 'primary.main',
-                  fontSize: 32
-                }} 
-              />
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <MedicalServices sx={{ mr: 2, color: "primary.main", fontSize: 32 }} />
               <Box>
-                <Typography variant="h6" noWrap component="div" fontWeight="bold">
+                <Typography variant="h6" noWrap fontWeight="bold">
                   PharmaCare
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
-                  {t('layout.managementSystem')}
+                  {t("layout.managementSystem")}
                 </Typography>
               </Box>
             </Box>
           )}
           {collapsed && (
-            <MedicalServices 
-              sx={{ 
-                color: 'primary.main',
-                fontSize: 32
-              }} 
-            />
+            <MedicalServices sx={{ color: "primary.main", fontSize: 32 }} />
           )}
-          <Tooltip title={collapsed ? t('layout.expandSidebar') : t('layout.collapseSidebar')}>
-            <IconButton 
+          <Tooltip title={collapsed ? t("layout.expandSidebar") : t("layout.collapseSidebar")}>
+            <IconButton
               onClick={toggleCollapse}
               size="small"
               sx={{
-                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`,
+                bgcolor: alpha(muiTheme.palette.primary.main, 0.05),
               }}
             >
               {collapsed ? <ChevronRight /> : <ChevronLeft />}
@@ -302,187 +421,180 @@ export default function Layout() {
 
         <Divider />
 
-        {/* Navigation Menu */}
-        <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
-          {filteredMenuSections.map((section, index) => (
-            <Box key={section.title}>
-              {!collapsed && (
-                <ListItem sx={{ py: 1 }}>
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
-                      fontWeight: 'bold',
-                      color: 'text.secondary',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      fontSize: '0.7rem'
-                    }}
-                  >
-                    {section.title}
-                  </Typography>
-                </ListItem>
-              )}
-              
-              <List dense sx={{ py: 0 }}>
-                {section.items.map((item) => (
-                  <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-                    <ListItemButton 
-                      onClick={() => navigate(item.path)}
-                      sx={{
-                        mx: 1,
-                        borderRadius: 2,
-                        py: 1.2,
-                        backgroundColor: isActivePath(item.path) 
-                          ? alpha(theme.palette.primary.main, 0.1)
-                          : 'transparent',
-                        border: isActivePath(item.path) 
-                          ? `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
-                          : '1px solid transparent',
-                        '&:hover': {
-                          backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                          border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                        },
-                        justifyContent: collapsed ? 'center' : 'flex-start',
-                      }}
-                    >
-                      <ListItemIcon sx={{ 
-                        minWidth: collapsed ? 'auto' : 40,
-                        color: isActivePath(item.path) ? 'primary.main' : 'text.secondary'
-                      }}>
-                        {item.badge > 0 ? (
-                          <Badge badgeContent={item.badge} color="error" variant="dot">
-                            {item.icon}
-                          </Badge>
-                        ) : (
-                          item.icon
-                        )}
-                      </ListItemIcon>
-                      
-                      {!collapsed && (
-                        <>
-                          <ListItemText 
-                            primary={item.text}
-                            primaryTypographyProps={{
-                              fontSize: '0.9rem',
-                              fontWeight: isActivePath(item.path) ? 'bold' : 'normal',
-                              color: isActivePath(item.path) ? 'primary.main' : 'text.primary'
+        {/* Loading State */}
+        {loading ? (
+          <Box sx={{ p: 3, textAlign: "center" }}>
+            <CircularProgress size={24} />
+            <Typography variant="body2" mt={1}>
+              {t("layout.loadingMenu") || "Loading menu..."}
+            </Typography>
+          </Box>
+        ) : (
+          <Box sx={{ overflow: "auto", flexGrow: 1 }}>
+            {menuSections.length === 0 ? (
+              <Box sx={{ p: 3 }}>
+                <Typography color="text.secondary" textAlign="center">
+                  {t("layout.noAccess") || "No access to any pages."}
+                </Typography>
+              </Box>
+            ) : (
+              menuSections.map((section) => (
+                <Box key={section.title} component="nav">
+                  {!collapsed && (
+                    <ListItem sx={{ py: 1 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontWeight: "bold",
+                          color: "text.secondary",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
+                          fontSize: "0.7rem",
+                        }}
+                      >
+                        {section.title}
+                      </Typography>
+                    </ListItem>
+                  )}
+                  <List dense>
+                    {section.items.map((item) => (
+                      <ListItem key={item.id} disablePadding sx={{ mb: 0.5 }}>
+                        <ListItemButton
+                          onClick={() => navigate(item.path)}
+                          sx={{
+                            mx: 1,
+                            borderRadius: 2,
+                            py: 1.2,
+                            backgroundColor: isActivePath(item.path)
+                              ? alpha(muiTheme.palette.primary.main, 0.1)
+                              : "transparent",
+                            border: isActivePath(item.path)
+                              ? `1px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`
+                              : "1px solid transparent",
+                            "&:hover": {
+                              backgroundColor: alpha(muiTheme.palette.primary.main, 0.05),
+                              border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
+                            },
+                            justifyContent: collapsed ? "center" : "flex-start",
+                          }}
+                        >
+                          <ListItemIcon
+                            sx={{
+                              minWidth: collapsed ? "auto" : 40,
+                              color: isActivePath(item.path)
+                                ? "primary.main"
+                                : "text.secondary",
+                            }}
+                          >
+                            {React.createElement(iconMap[item.icon] || DashboardIcon)}
+                          </ListItemIcon>
+                          {!collapsed && (
+                            <>
+                              <ListItemText
+                                primary={item.displayText}
+                                primaryTypographyProps={{
+                                  fontSize: "0.9rem",
+                                  fontWeight: isActivePath(item.path) ? "bold" : "normal",
+                                  color: isActivePath(item.path) ? "primary.main" : "text.primary",
+                                }}
+                              />
+                              {item.badge > 0 && (
+                                <Chip
+                                  label={item.badge}
+                                  size="small"
+                                  color="error"
+                                  sx={{ height: 20, minWidth: 20, fontSize: "0.7rem" }}
+                                />
+                              )}
+                            </>
+                          )}
+                        </ListItemButton>
+                        {collapsed && item.badge > 0 && (
+                          <Chip
+                            label={item.badge}
+                            size="small"
+                            color="error"
+                            sx={{
+                              position: "absolute",
+                              right: 8,
+                              top: 10,
+                              height: 16,
+                              fontSize: "0.6rem",
                             }}
                           />
-                          {item.badge > 0 && (
-                            <Chip 
-                              label={item.badge} 
-                              size="small" 
-                              color="error"
-                              sx={{ height: 20, minWidth: 20, fontSize: '0.7rem' }}
-                            />
-                          )}
-                        </>
-                      )}
-                    </ListItemButton>
-                    
-                    {collapsed && (
-                      <Tooltip title={item.text} placement="right" arrow>
-                        <Box sx={{ position: 'absolute', right: 8 }}>
-                          {item.badge > 0 && (
-                            <Chip 
-                              label={item.badge} 
-                              size="small" 
-                              color="error"
-                              sx={{ 
-                                height: 16, 
-                                minWidth: 16, 
-                                fontSize: '0.6rem',
-                                position: 'absolute',
-                                top: 8,
-                                right: 8
-                              }}
-                            />
-                          )}
-                        </Box>
-                      </Tooltip>
-                    )}
-                  </ListItem>
-                ))}
-              </List>
-              
-              {index < filteredMenuSections.length - 1 && !collapsed && (
-                <Divider sx={{ my: 1, opacity: 0.5 }} />
-              )}
-            </Box>
-          ))}
-        </Box>
-
-        {/* Footer Section */}
-        <Box sx={{ p: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-          {/* Theme Toggle */}
-          <Tooltip title={t('layout.switchTo')} arrow>
-            <ListItemButton 
-              onClick={toggleTheme}
-              sx={{ 
-                borderRadius: 2,
-                mb: 1,
-                justifyContent: collapsed ? 'center' : 'flex-start'
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: collapsed ? 'auto' : 40 }}>
-                {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-              </ListItemIcon>
-              {!collapsed && (
-                <ListItemText primary={t('layout.themeMode')} />
-              )}
-            </ListItemButton>
-          </Tooltip>
-
-          {/* Language Switcher Button */}
-          <Tooltip title={t('common.language')} arrow>
-            <ListItemButton 
-              onClick={handleLanguageMenuOpen}
-              sx={{ 
-                borderRadius: 2,
-                mb: 1,
-                justifyContent: collapsed ? 'center' : 'flex-start'
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: collapsed ? 'auto' : 40 }}>
-                <TranslateIcon />
-              </ListItemIcon>
-              {!collapsed && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <span role="img" aria-label={currentLang.name}>{currentLang.flag}</span>
-                  <Typography variant="body2">{currentLang.name}</Typography>
+                        )}
+                      </ListItem>
+                    ))}
+                  </List>
+                  <Divider sx={{ my: 1, opacity: 0.5 }} />
                 </Box>
-              )}
-            </ListItemButton>
-          </Tooltip>
+              ))
+            )}
+          </Box>
+        )}
 
-          {/* User Profile */}
+        {/* Footer */}
+        <Box sx={{ p: 2, borderTop: `1px solid ${alpha(muiTheme.palette.divider, 0.1)}` }}>
+          
+          {/* Theme Toggle Button */}
           <ListItemButton 
-            onClick={handleMenuOpen}
+            onClick={toggleTheme}
             sx={{ 
-              borderRadius: 2,
-              justifyContent: collapsed ? 'center' : 'flex-start'
+              borderRadius: 2, 
+              mb: 1,
+              justifyContent: collapsed ? "center" : "flex-start" 
             }}
           >
+            <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 40 }}>
+              {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </ListItemIcon>
+            {!collapsed && (
+              <ListItemText primary={t("layout.themeMode")} />
+            )}
+          </ListItemButton>
+
+          {/* Language Switch Button WITH FLAG */}
+          <ListItemButton 
+            onClick={handleLanguageMenuOpen}
+            sx={{ 
+              borderRadius: 2, 
+              mb: 1,
+              justifyContent: collapsed ? "center" : "flex-start" 
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 40 }}>
+              <TranslateIcon />
+            </ListItemIcon>
+            {!collapsed && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span role="img" aria-label={currentLang.name} style={{ fontSize: '1.2em' }}>
+                  {currentLang.flag}
+                </span>
+                <Typography variant="body2">{currentLang.name}</Typography>
+              </Box>
+            )}
+          </ListItemButton>
+
+          {/* User Profile */}
+          <ListItemButton onClick={handleMenuOpen} sx={{ borderRadius: 2 }}>
             <Avatar
-              alt={username}
-              sx={{ 
-                width: 32, 
-                height: 32, 
-                bgcolor: theme.palette[getRoleColor(role)].main,
+              sx={{
+                width: 32,
+                height: 32,
+                bgcolor: "primary.main",
                 fontSize: "14px",
-                mr: collapsed ? 0 : 1 
+                mr: 1,
               }}
             >
               {username.charAt(0).toUpperCase()}
             </Avatar>
-            
             {!collapsed && (
-              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+              <Box sx={{ flexGrow: 1 }}>
                 <Typography variant="body2" fontWeight="medium" noWrap>
                   {username}
                 </Typography>
                 <Typography variant="caption" color="textSecondary" noWrap>
-                  {role.charAt(0).toUpperCase() + role.slice(1)}
+                  {roleNames.join(", ")}
                 </Typography>
               </Box>
             )}
@@ -490,94 +602,52 @@ export default function Layout() {
         </Box>
       </Drawer>
 
-      {/* User Menu Dropdown */}
+      {/* User Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        PaperProps={{ 
-          elevation: 8, 
-          sx: { 
-            mt: 1.5, 
-            minWidth: 200,
-            borderRadius: 2,
-            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-          } 
-        }}
+        PaperProps={{ elevation: 8 }}
       >
-        <MenuItem onClick={() => handleNavigate("/change-password")}>
-          <ListItemIcon><LockIcon fontSize="small" color="primary" /></ListItemIcon>
-          <ListItemText primary={t('layout.changePassword')} />
+        <MenuItem onClick={() => navigate("/change-password")}>
+          <ListItemIcon><PeopleIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>{t("layout.changePassword")}</ListItemText>
         </MenuItem>
 
-        <MenuItem onClick={() => handleNavigate("/settings")}>
-          <ListItemIcon><Settings fontSize="small" color="primary" /></ListItemIcon>
-          <ListItemText primary={t('layout.settings')} />
-        </MenuItem>
-
-        {role === "admin" && (
-          <MenuItem onClick={() => handleNavigate("/users")}>
-            <ListItemIcon><PeopleIcon fontSize="small" color="primary" /></ListItemIcon>
-            <ListItemText primary={t('layout.userManagement')} />
-          </MenuItem>
-        )}
-
-        <Divider />
-
-        <MenuItem 
-          onClick={logout} 
-          sx={{ 
-            color: "error.main",
-            '&:hover': {
-              backgroundColor: alpha(theme.palette.error.main, 0.1),
-            }
-          }}
-        >
+        <MenuItem onClick={toggleTheme}>
           <ListItemIcon>
-            <LogoutIcon fontSize="small" color="error" />
+            {mode === 'dark' ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
           </ListItemIcon>
-          <ListItemText primary={t('layout.logout')} />
+          <ListItemText>{t("layout.themeMode")}</ListItemText>
+        </MenuItem>
+
+        <MenuItem onClick={logout}>
+          <ListItemIcon><PeopleIcon fontSize="small" color="error" /></ListItemIcon>
+          <ListItemText primary={t("layout.logout")} />
         </MenuItem>
       </Menu>
 
-      {/* Language Selection Menu */}
+      {/* Language Menu WITH FLAGS */}
       <Menu
-        anchorEl={menuAnchorEl}
-        open={Boolean(menuAnchorEl)}
+        anchorEl={languageAnchorEl}
+        open={Boolean(languageAnchorEl)}
         onClose={handleLanguageMenuClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        PaperProps={{ 
-          elevation: 8, 
-          sx: { 
-            mt: 1.5, 
-            minWidth: 220,
-            borderRadius: 2,
-            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-          } 
-        }}
+        PaperProps={{ elevation: 8 }}
       >
         {languages.map((lang) => (
-          <MenuItem
-            key={lang.code}
-            selected={i18n.language === lang.code}
+          <MenuItem 
+            key={lang.code} 
             onClick={() => changeLanguage(lang.code)}
-            sx={{
-              fontWeight: i18n.language === lang.code ? 'bold' : 'normal'
-            }}
+            selected={i18n.language === lang.code}
           >
             <ListItemIcon>
               <span role="img" aria-label={lang.name} style={{ fontSize: '1.2em' }}>
                 {lang.flag}
               </span>
             </ListItemIcon>
-            <ListItemText primary={lang.name} />
+            <ListItemText>{lang.name}</ListItemText>
             {i18n.language === lang.code && (
-              <ListItemIcon>
-                ✓
-              </ListItemIcon>
+              <ListItemIcon>✓</ListItemIcon>
             )}
           </MenuItem>
         ))}
@@ -588,21 +658,16 @@ export default function Layout() {
         component="main"
         sx={{
           flexGrow: 1,
-          bgcolor: 'background.default',
-          color: 'text.primary',
-          minHeight: '100vh',
+          bgcolor: "background.default",
+          color: "text.primary",
+          minHeight: "100vh",
           p: 3,
-          transition: theme.transitions.create('margin', {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
-          marginLeft: collapsed ? `-${drawerWidth - collapsedDrawerWidth}px` : 0,
         }}
       >
         <Toolbar />
         <Outlet />
-        {/* ✅ AI ChatBot rendered inside main content */}
         <AIChatBot />
+        <DebugInfo />
       </Box>
     </Box>
   );

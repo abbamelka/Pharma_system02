@@ -142,7 +142,7 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
  *       401:
  *         description: Unauthorized
  */
-router.post("/", authenticate, authorizeRoles("admin", "pharmacist"), medicineController.createMedicine);
+router.post("/", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), medicineController.createMedicine);
 
 /**
  * @swagger
@@ -169,7 +169,7 @@ router.post("/", authenticate, authorizeRoles("admin", "pharmacist"), medicineCo
  *       401:
  *         description: Unauthorized
  */
-router.get("/", authenticate, authorizeRoles("admin", "pharmacist", "cashier"), medicineController.getAllMedicines);
+router.get("/", authenticate, authorizeRoles("admin", "pharmacist", "cashier","superadmin"), medicineController.getAllMedicines);
 
 /**
  * @swagger
@@ -202,7 +202,7 @@ router.get("/", authenticate, authorizeRoles("admin", "pharmacist", "cashier"), 
  *       401:
  *         description: Unauthorized
  */
-router.get("/low-stock", authenticate, authorizeRoles("admin", "pharmacist"), medicineController.getLowStock);
+router.get("/low-stock", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), medicineController.getLowStock);
 
 /**
  * @swagger
@@ -235,7 +235,7 @@ router.get("/low-stock", authenticate, authorizeRoles("admin", "pharmacist"), me
  *       401:
  *         description: Unauthorized
  */
-router.get("/expiring-soon", authenticate, authorizeRoles("admin", "pharmacist"), medicineController.getExpiringSoon);
+router.get("/expiring-soon", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), medicineController.getExpiringSoon);
 /**
  * @swagger
  * /medicine/search:
@@ -306,7 +306,7 @@ router.get("/expiring-soon", authenticate, authorizeRoles("admin", "pharmacist")
  *       500:
  *         description: Server error
  */
-router.get("/search", authenticate, authorizeRoles("admin", "pharmacist", "cashier","doctor"), medicineController.searchMedicines);
+router.get("/search", authenticate, authorizeRoles("admin", "pharmacist", "cashier","doctor","superadmin"), medicineController.searchMedicines);
 
 /**
  * @swagger
@@ -339,7 +339,7 @@ router.get("/search", authenticate, authorizeRoles("admin", "pharmacist", "cashi
  *       401:
  *         description: Unauthorized
  */
-router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist", "cashier"), medicineController.getMedicineById);
+router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist", "cashier","superadmin"), medicineController.getMedicineById);
 
 /**
  * @swagger
@@ -380,7 +380,7 @@ router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist", "cashier"
  *       401:
  *         description: Unauthorized
  */
-router.put("/:id", authenticate, authorizeRoles("admin", "pharmacist"), medicineController.updateMedicine);
+router.put("/:id", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), medicineController.updateMedicine);
 
 /**
  * @swagger
@@ -413,7 +413,7 @@ router.put("/:id", authenticate, authorizeRoles("admin", "pharmacist"), medicine
  *       401:
  *         description: Unauthorized
  */
-router.delete("/:id", authenticate, authorizeRoles("admin"), medicineController.deleteMedicine);
+router.delete("/:id", authenticate, authorizeRoles("admin","superadmin"), medicineController.deleteMedicine);
 
 /**
  * @swagger
@@ -452,7 +452,7 @@ router.delete("/:id", authenticate, authorizeRoles("admin"), medicineController.
  *       401:
  *         description: Unauthorized
  */
-router.post("/:medicineId/inventory", authenticate, authorizeRoles("admin", "pharmacist"), medicineController.addInventory);
+router.post("/:medicineId/inventory", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), medicineController.addInventory);
 
 
 module.exports = router;

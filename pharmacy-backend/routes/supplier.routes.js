@@ -46,7 +46,7 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
  *       401:
  *         description: Unauthorized
  */
-router.post("/", authenticate, authorizeRoles("admin", "pharmacist"), SupplierController.createSupplier);
+router.post("/", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), SupplierController.createSupplier);
 
 /**
  * @swagger
@@ -62,7 +62,7 @@ router.post("/", authenticate, authorizeRoles("admin", "pharmacist"), SupplierCo
  *       401:
  *         description: Unauthorized
  */
-router.get("/", authenticate, authorizeRoles("admin", "pharmacist"), SupplierController.getAllSuppliers);
+router.get("/", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), SupplierController.getAllSuppliers);
 
 /**
  * @swagger
@@ -86,7 +86,7 @@ router.get("/", authenticate, authorizeRoles("admin", "pharmacist"), SupplierCon
  *       401:
  *         description: Unauthorized
  */
-router.get("/search", authenticate, authorizeRoles("admin", "pharmacist"), SupplierController.searchSuppliers);
+router.get("/search", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), SupplierController.searchSuppliers);
 
 /**
  * @swagger
@@ -110,7 +110,7 @@ router.get("/search", authenticate, authorizeRoles("admin", "pharmacist"), Suppl
  *       401:
  *         description: Unauthorized
  */
-router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist"), SupplierController.getSupplierById);
+router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), SupplierController.getSupplierById);
 
 /**
  * @swagger
@@ -153,7 +153,7 @@ router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist"), Supplier
  *       401:
  *         description: Unauthorized
  */
-router.put("/:id", authenticate, authorizeRoles("admin", "pharmacist"), SupplierController.updateSupplier);
+router.put("/:id", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), SupplierController.updateSupplier);
 
 /**
  * @swagger
@@ -177,6 +177,6 @@ router.put("/:id", authenticate, authorizeRoles("admin", "pharmacist"), Supplier
  *       401:
  *         description: Unauthorized
  */
-router.delete("/:id", authenticate, authorizeRoles("admin"), SupplierController.deleteSupplier);
+router.delete("/:id", authenticate, authorizeRoles("admin","superadmin"), SupplierController.deleteSupplier);
 
 module.exports = router;

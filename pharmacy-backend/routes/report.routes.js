@@ -45,7 +45,7 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
  *       500:
  *         description: Server error
  */
-router.get("/daily-sales", authenticate, authorizeRoles("admin"), ReportController.getDailySales);
+router.get("/daily-sales", authenticate, authorizeRoles("admin","superadmin"), ReportController.getDailySales);
 
 /**
  * @swagger
@@ -89,7 +89,7 @@ router.get("/daily-sales", authenticate, authorizeRoles("admin"), ReportControll
  *       401:
  *         description: Unauthorized
  */
-router.get("/top-medicines", authenticate, authorizeRoles("admin"), ReportController.getTopMedicines);
+router.get("/top-medicines", authenticate, authorizeRoles("admin","superadmin"), ReportController.getTopMedicines);
 
 /**
  * @swagger
@@ -134,7 +134,7 @@ router.get("/top-medicines", authenticate, authorizeRoles("admin"), ReportContro
  *       401:
  *         description: Unauthorized
  */
-router.get("/low-stock", authenticate, authorizeRoles("admin"), ReportController.getLowStockAlerts);
+router.get("/low-stock", authenticate, authorizeRoles("admin","superadmin"), ReportController.getLowStockAlerts);
 
 /**
  * @swagger
@@ -179,7 +179,7 @@ router.get("/low-stock", authenticate, authorizeRoles("admin"), ReportController
  *       401:
  *         description: Unauthorized
  */
-router.get("/expiring-soon", authenticate, authorizeRoles("admin"), ReportController.getExpiringSoonAlerts);
+router.get("/expiring-soon", authenticate, authorizeRoles("admin","superadmin"), ReportController.getExpiringSoonAlerts);
 
 /**
  * @swagger
@@ -215,7 +215,7 @@ router.get("/expiring-soon", authenticate, authorizeRoles("admin"), ReportContro
  *       401:
  *         description: Unauthorized
  */
-router.get("/prescription-rate", authenticate, authorizeRoles("admin"), ReportController.getPrescriptionFulfillmentRate);
+router.get("/prescription-rate", authenticate, authorizeRoles("admin","superadmin"), ReportController.getPrescriptionFulfillmentRate);
 
 /**
  * @swagger
@@ -247,6 +247,6 @@ router.get("/prescription-rate", authenticate, authorizeRoles("admin"), ReportCo
  *       401:
  *         description: Unauthorized
  */
-router.get("/revenue-by-category", authenticate, authorizeRoles("admin"), ReportController.getRevenueByCategory);
+router.get("/revenue-by-category", authenticate, authorizeRoles("admin","superadmin"), ReportController.getRevenueByCategory);
 
 module.exports = router;

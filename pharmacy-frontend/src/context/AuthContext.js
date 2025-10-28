@@ -8,7 +8,6 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Decode JWT token to get user data
   const decodeToken = (token) => {
     try {
       const base64Url = token.split('.')[1];
@@ -29,9 +28,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Initialize auth state on mount
   useEffect(() => {
-    // Check if token is expired (defined inside to avoid ESLint warning)
     const isTokenExpired = (token) => {
       if (!token) return true;
       const decoded = decodeToken(token);
@@ -55,7 +52,6 @@ export function AuthProvider({ children }) {
 
     setLoading(false);
 
-    // Auto-logout interval
     const interval = setInterval(() => {
       const currentToken = localStorage.getItem("token");
       if (currentToken && isTokenExpired(currentToken)) {
@@ -64,7 +60,7 @@ export function AuthProvider({ children }) {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, []); // ✅ no dependency warning now
+  }, []);
 
   const login = async (credentials) => {
     try {
@@ -111,7 +107,8 @@ export function AuthProvider({ children }) {
     isAdmin: user?.role === 'admin',
     isPharmacist: ['pharmacist', 'admin'].includes(user?.role),
     isCashier: ['cashier', 'admin'].includes(user?.role),
-    isDoctor: ['doctor', 'admin'].includes(user?.role)
+    isDoctor: ['doctor', 'admin'].includes(user?.role),
+    isSuperAdmin: user?.role === 'superadmin'  // ✅ added superadmin check
   };
 
   return (

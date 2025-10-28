@@ -55,7 +55,7 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
  *       401:
  *         description: Unauthorized
  */
-router.post("/batch", authenticate, authorizeRoles("pharmacist", "admin"), InventoryController.addBatch);
+router.post("/batch", authenticate, authorizeRoles("pharmacist", "admin","superadmin"), InventoryController.addBatch);
 
 /**
  * @swagger
@@ -96,7 +96,7 @@ router.post("/batch", authenticate, authorizeRoles("pharmacist", "admin"), Inven
  *       401:
  *         description: Unauthorized
  */
-router.put("/batch/:id", authenticate, authorizeRoles("pharmacist", "admin"), InventoryController.updateBatch);
+router.put("/batch/:id", authenticate, authorizeRoles("pharmacist", "admin","superadmin"), InventoryController.updateBatch);
 
 /**
  * @swagger
@@ -120,7 +120,7 @@ router.put("/batch/:id", authenticate, authorizeRoles("pharmacist", "admin"), In
  *       401:
  *         description: Unauthorized
  */
-router.get("/medicine/:medicineId", authenticate, authorizeRoles("pharmacist", "admin", "cashier"), InventoryController.getBatchesByMedicine);
+router.get("/medicine/:medicineId", authenticate, authorizeRoles("pharmacist", "admin", "cashier","superadmin"), InventoryController.getBatchesByMedicine);
 
 /**
  * @swagger
@@ -142,7 +142,7 @@ router.get("/medicine/:medicineId", authenticate, authorizeRoles("pharmacist", "
  *       401:
  *         description: Unauthorized
  */
-router.get("/low-stock", authenticate, authorizeRoles("admin", "pharmacist"), InventoryController.getLowStockAlerts);
+router.get("/low-stock", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), InventoryController.getLowStockAlerts);
 
 /**
  * @swagger
@@ -164,7 +164,7 @@ router.get("/low-stock", authenticate, authorizeRoles("admin", "pharmacist"), In
  *       401:
  *         description: Unauthorized
  */
-router.get("/expiring-soon", authenticate, authorizeRoles("admin", "pharmacist"), InventoryController.getExpiringSoonAlerts);
+router.get("/expiring-soon", authenticate, authorizeRoles("admin", "pharmacist","superadmin"), InventoryController.getExpiringSoonAlerts);
 /**
  * @swagger
  * /inventory/batch/{id}:
@@ -187,6 +187,6 @@ router.get("/expiring-soon", authenticate, authorizeRoles("admin", "pharmacist")
  *       401:
  *         description: Unauthorized
  */
-router.get("/batch/:id", authenticate, authorizeRoles("pharmacist", "admin", "cashier"), InventoryController.getBatchById);
+router.get("/batch/:id", authenticate, authorizeRoles("pharmacist", "admin", "cashier","superadmin"), InventoryController.getBatchById);
 
 module.exports = router;

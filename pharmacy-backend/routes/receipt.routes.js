@@ -43,7 +43,7 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
  *       401:
  *         description: Unauthorized
  */
-router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist", "cashier"), ReceiptController.generateReceipt);
+router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist", "cashier","superadmin"), ReceiptController.generateReceipt);
 
 /**
  * @swagger
@@ -72,6 +72,6 @@ router.get("/:id", authenticate, authorizeRoles("admin", "pharmacist", "cashier"
  *       401:
  *         description: Unauthorized
  */
-router.get("/:id/download", authenticate, authorizeRoles("admin", "pharmacist", "cashier"), ReceiptController.downloadReceipt);
+router.get("/:id/download", authenticate, authorizeRoles("admin", "pharmacist", "cashier","superadmin"), ReceiptController.downloadReceipt);
 
 module.exports = router;

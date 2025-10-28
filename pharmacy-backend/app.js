@@ -79,6 +79,9 @@ app.use("/medicine", require("./routes/medicine.routes"));
 app.use("/receipts", require("./routes/receipt.routes"));
 app.use("/audit", require("./routes/audit.routes"));
 app.use('/ai', require('./routes/ai'));
+const roleRoutes = require("./routes/role.routes");
+app.use("/roles", roleRoutes);
+app.use("/menus",require("./routes/menu.routes"));
 // =====================
 // ⚠️ Error Handler
 // =====================

@@ -56,7 +56,7 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
  *       401:
  *         description: Unauthorized
  */
-router.post("/", authenticate, authorizeRoles("doctor"), PrescriptionController.createPrescription);
+router.post("/", authenticate, authorizeRoles("doctor","superadmin"), PrescriptionController.createPrescription);
 
 /**
  * @swagger
@@ -72,7 +72,7 @@ router.post("/", authenticate, authorizeRoles("doctor"), PrescriptionController.
  *       401:
  *         description: Unauthorized
  */
-router.get("/pending", authenticate, authorizeRoles("pharmacist", "admin"), PrescriptionController.getPendingPrescriptions);
+router.get("/pending", authenticate, authorizeRoles("pharmacist", "admin","superadmin"), PrescriptionController.getPendingPrescriptions);
 
 /**
  * @swagger
@@ -101,7 +101,7 @@ router.get("/pending", authenticate, authorizeRoles("pharmacist", "admin"), Pres
  *       401:
  *         description: Unauthorized
  */
-router.get("/search", authenticate, authorizeRoles("pharmacist", "admin", "doctor"), PrescriptionController.searchPrescriptions);
+router.get("/search", authenticate, authorizeRoles("pharmacist", "admin", "doctor","superadmin"), PrescriptionController.searchPrescriptions);
 
 /**
  * @swagger
@@ -125,7 +125,7 @@ router.get("/search", authenticate, authorizeRoles("pharmacist", "admin", "docto
  *       401:
  *         description: Unauthorized
  */
-router.get("/:id", authenticate, authorizeRoles("pharmacist", "admin", "doctor"), PrescriptionController.getPrescriptionById);
+router.get("/:id", authenticate, authorizeRoles("pharmacist", "admin", "doctor","superadmin"), PrescriptionController.getPrescriptionById);
 
 /**
  * @swagger
@@ -151,7 +151,7 @@ router.get("/:id", authenticate, authorizeRoles("pharmacist", "admin", "doctor")
  *       404:
  *         description: Prescription not found
  */
-router.patch("/:id/fulfill", authenticate, authorizeRoles("pharmacist", "admin"), PrescriptionController.fulfillPrescription);
+router.patch("/:id/fulfill", authenticate, authorizeRoles("pharmacist", "admin","superadmin"), PrescriptionController.fulfillPrescription);
 
 /**
  * @swagger
@@ -177,7 +177,7 @@ router.patch("/:id/fulfill", authenticate, authorizeRoles("pharmacist", "admin")
  *       404:
  *         description: Prescription not found
  */
-router.patch("/:id/cancel", authenticate, authorizeRoles("doctor", "pharmacist"), PrescriptionController.cancelPrescription);
+router.patch("/:id/cancel", authenticate, authorizeRoles("doctor", "pharmacist","superadmin"), PrescriptionController.cancelPrescription);
 
 // routes/prescription.routes.js
 

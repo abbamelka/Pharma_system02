@@ -75,7 +75,7 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
 router.post(
   "/",
   authenticate,
-  authorizeRoles("cashier", "admin", "pharmacist"),
+  authorizeRoles("cashier", "admin", "pharmacist","superadmin"),
   OrderController.createOrder
 );
 
@@ -108,7 +108,7 @@ router.post(
 router.get(
   "/",
   authenticate,
-  authorizeRoles("admin", "pharmacist", "cashier"),
+  authorizeRoles("admin", "pharmacist", "cashier","superadmin"),
   OrderController.getAllOrders
 );
 
@@ -148,7 +148,7 @@ router.get(
 router.get(
   "/:id",
   authenticate,
-  authorizeRoles("admin", "pharmacist", "cashier"),
+  authorizeRoles("admin", "pharmacist", "cashier","superadmin"),
   OrderController.getOrderById
 );
 
@@ -206,7 +206,7 @@ router.get(
 router.patch(
   "/:id/status",
   authenticate,
-  authorizeRoles("cashier", "admin", "pharmacist"),
+  authorizeRoles("cashier", "admin", "pharmacist","superadmin"),
   OrderController.updateOrderStatus
 );
 

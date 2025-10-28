@@ -48,7 +48,7 @@ const { authenticate, authorizeRoles } = require("../middleware/auth");
  *       403:
  *         description: Forbidden (not admin)
  */
-router.post("/register", authenticate, authorizeRoles("admin"), UserController.register);
+router.post("/register", authenticate,authorizeRoles("admin","superadmin"), UserController.register);
 
 /**
  * @swagger
@@ -153,7 +153,7 @@ router.put("/password", authenticate, UserController.changePassword);
 router.patch(
   "/:id/status",
   authenticate,
-  authorizeRoles("admin"),
+  authorizeRoles("admin","superadmin"),
   UserController.updateUserStatus
 );
 
@@ -182,7 +182,7 @@ router.patch(
  *       404:
  *         description: User not found
  */
-router.delete("/:id", authenticate, authorizeRoles("admin"), UserController.deleteUser);
+router.delete("/:id", authenticate,authorizeRoles("admin","superadmin"), UserController.deleteUser);
 
 /**
  * @swagger
@@ -206,7 +206,7 @@ router.delete("/:id", authenticate, authorizeRoles("admin"), UserController.dele
  *       403:
  *         description: Forbidden (not admin)
  */
-router.get("/", authenticate, authorizeRoles("admin"), UserController.getAllUsers);
+router.get("/", authenticate,authorizeRoles("admin","superadmin"), UserController.getAllUsers);
 /**
  * @swagger
  * /users/reset-password:
@@ -260,7 +260,7 @@ router.get("/", authenticate, authorizeRoles("admin"), UserController.getAllUser
 router.post(
   "/reset-password",
   authenticate,
-  authorizeRoles("admin"),
+ authorizeRoles("admin","superadmin"),
   UserController.resetUserPassword
 );
 
